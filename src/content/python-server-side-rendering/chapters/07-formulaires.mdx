@@ -1,0 +1,272 @@
+---
+number: "07"
+title: "Formulaires et inputs"
+subtitle: "Gérer les données envoyées par l'utilisateur."
+---
+
+## Les formulaires HTML — rappel
+
+Un formulaire HTML permet à l'utilisateur d'**envoyer des données** au serveur. Voici la structure de base :
+
+```html
+<form action="/search" method="GET">
+    <label for="query">Recherche :</label>
+    <input type="text" name="query" id="query">
+    <button type="submit">Chercher</button>
+</form>
+```
+
+Les deux attributs essentiels de la balise <InlineCode>&lt;form&gt;</InlineCode> :
+- **action** : l'URL vers laquelle les données sont envoyées
+- **method** : la méthode HTTP utilisée (<InlineCode>GET</InlineCode> ou <InlineCode>POST</InlineCode>)
+
+## GET vs POST : quand utiliser quoi ?
+
+| Critère | GET | POST |
+|---|---|---|
+| **Données visibles dans l'URL** | Oui (<InlineCode>?query=python</InlineCode>) | Non (dans le corps de la requête) |
+| **Peut être mis en favoris** | Oui | Non |
+| **Taille des données** | Limitée (URL) | Pas de limite pratique |
+| **Usage typique** | Recherche, filtres, navigation | Création, modification, formulaire de contact |
+
+**Règle simple** : utilise <InlineCode>GET</InlineCode> pour **lire** des données (recherche, filtres) et <InlineCode>POST</InlineCode> pour **écrire** des données (créer un compte, envoyer un message).
+
+## `request.args` — récupérer les paramètres GET
+
+Les paramètres GET sont dans l'URL, après le <InlineCode>?</InlineCode>. Flask les rend accessibles via <InlineCode>request.args</InlineCode> :
+
+```python
+from flask import Flask, request, render_template
+
+app = Flask(__name__)
+
+@app.route("/search")
+def search():
+    # Récupérer le paramètre "query" depuis l'URL
+    query = request.args.get("query", "")
+
+    # Simuler une recherche
+    results = []
+    if query:
+        all_items = ["Python", "Flask", "Jinja2", "HTML", "CSS"]
+        results = [item for item in all_items if query.lower() in item.lower()]
+
+    return render_template("search.html", query=query, results=results)
+```
+
+```html
+<form action="/search" method="GET">
+    <input type="text" name="query" value="{{ query }}">
+    <button type="submit">Chercher</button>
+</form>
+
+{% if results %}
+    <ul>
+    {% for result in results %}
+        <li>{{ result }}</li>
+    {% endfor %}
+    </ul>
+{% elif query %}
+    <p>Aucun résultat pour "{{ query }}".</p>
+{% endif %}
+```
+
+<InlineCode>request.args.get("query", "")</InlineCode> retourne la valeur du paramètre ou une chaîne vide par défaut si le paramètre est absent. C'est plus sûr que <InlineCode>request.args["query"]</InlineCode> qui lèverait une erreur.
+
+<ExerciseById id="07-form-get" />
+
+## `request.form` — récupérer les données POST
+
+Les données POST sont dans le **corps** de la requête. Flask les rend accessibles via <InlineCode>request.form</InlineCode>. Ta route doit explicitement accepter la méthode POST :
+
+```python
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        # Récupérer les données du formulaire
+        username = request.form.get("username", "")
+        email = request.form.get("email", "")
+
+        # Traiter les données...
+        return f"Bienvenue {username} !"
+
+    # Méthode GET : afficher le formulaire
+    return render_template("register.html")
+```
+
+```html
+<form action="/register" method="POST">
+    <label for="username">Nom d'utilisateur :</label>
+    <input type="text" name="username" id="username" required>
+
+    <label for="email">Email :</label>
+    <input type="email" name="email" id="email" required>
+
+    <button type="submit">S'inscrire</button>
+</form>
+```
+
+Remarque que la route accepte **les deux méthodes** avec <InlineCode>methods=["GET", "POST"]</InlineCode>. C'est un pattern très courant : la même route affiche le formulaire (GET) et traite les données (POST).
+
+<ExerciseById id="07-form-post" />
+
+## Exemple complet : formulaire de contact
+
+Voici un formulaire de contact complet avec validation côté serveur.
+
+Le fichier <InlineCode>app.py</InlineCode> :
+
+```python
+from flask import Flask, request, render_template, redirect, url_for, flash
+
+app = Flask(__name__)
+app.secret_key = "ma-cle-secrete"  # Nécessaire pour flash()
+
+@app.route("/contact", methods=["GET", "POST"])
+def contact():
+    if request.method == "POST":
+        # Récupérer les données du formulaire
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        message = request.form.get("message", "").strip()
+
+        # Validation côté serveur
+        errors = []
+        if not name:
+            errors.append("Le nom est obligatoire.")
+        if not email or "@" not in email:
+            errors.append("L'email n'est pas valide.")
+        if not message:
+            errors.append("Le message ne peut pas être vide.")
+
+        if errors:
+            # Réafficher le formulaire avec les erreurs
+            return render_template(
+                "contact.html",
+                errors=errors,
+                name=name,
+                email=email,
+                message=message
+            )
+
+        # Tout est valide — traiter le message
+        flash("Ton message a bien été envoyé !", "success")
+        return redirect(url_for("contact"))
+
+    # Méthode GET : afficher le formulaire vide
+    return render_template("contact.html", errors=[], name="", email="", message="")
+```
+
+Le template <InlineCode>templates/contact.html</InlineCode> :
+
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Contact</title>
+</head>
+<body>
+    <h1>Nous contacter</h1>
+
+    <!-- Messages flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, msg in messages %}
+            <div class="alert alert-{{ category }}">{{ msg }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    <!-- Erreurs de validation -->
+    {% if errors %}
+        <div class="errors">
+            <ul>
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form action="/contact" method="POST">
+        <label for="name">Nom :</label>
+        <input type="text" name="name" id="name" value="{{ name }}" required>
+
+        <label for="email">Email :</label>
+        <input type="email" name="email" id="email" value="{{ email }}" required>
+
+        <label for="message">Message :</label>
+        <textarea name="message" id="message" rows="5" required>{{ message }}</textarea>
+
+        <button type="submit">Envoyer</button>
+    </form>
+</body>
+</html>
+```
+
+Plusieurs points importants dans cet exemple :
+- Les champs sont **pré-remplis** avec les valeurs saisies (<InlineCode>{"value=\"{{ name }}\""}</InlineCode>) pour que l'utilisateur ne perde pas sa saisie en cas d'erreur
+- La validation se fait **côté serveur** — l'attribut <InlineCode>required</InlineCode> côté HTML est un bonus, pas une sécurité
+- Après un succès, on **redirige** au lieu d'afficher directement une réponse (voir section suivante)
+
+<Callout variant="warn" title="Toujours valider côté serveur">
+  Toujours valider les données côté serveur — ne fais jamais confiance aux données envoyées par le client. Les attributs HTML comme <InlineCode>required</InlineCode> ou <InlineCode>type="email"</InlineCode> peuvent être contournés facilement.
+</Callout>
+
+## Les messages flash
+
+Les **flash messages** sont des messages temporaires affichés une seule fois à l'utilisateur (confirmation, erreur, etc.). Flask fournit deux fonctions pour cela :
+
+```python
+from flask import flash, get_flashed_messages
+
+# Dans une route — stocker un message
+flash("Opération réussie !", "success")
+flash("Une erreur est survenue.", "error")
+```
+
+```jinja2
+<!-- Dans un template — afficher les messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, msg in messages %}
+        <div class="alert alert-{{ category }}">{{ msg }}</div>
+    {% endfor %}
+{% endwith %}
+```
+
+Pour que les flash messages fonctionnent, tu dois définir une <InlineCode>secret_key</InlineCode> dans ton application :
+
+```python
+app.secret_key = "ma-cle-secrete"
+```
+
+## Le pattern Post/Redirect/Get
+
+Après avoir traité un formulaire POST avec succès, tu dois **rediriger** l'utilisateur au lieu de renvoyer directement une réponse HTML. C'est le pattern **Post/Redirect/Get** (PRG) :
+
+```python
+from flask import redirect, url_for
+
+@app.route("/submit", methods=["POST"])
+def submit():
+    # Traiter les données...
+    flash("Données enregistrées !")
+    # Rediriger vers une autre page
+    return redirect(url_for("success"))
+
+@app.route("/success")
+def success():
+    return render_template("success.html")
+```
+
+<Callout variant="info" title="Pourquoi rediriger après un POST ?">
+  Le pattern POST → Redirect → GET empêche la re-soumission du formulaire quand l'utilisateur rafraîchit la page. Sans redirection, un rafraîchissement renverrait les mêmes données POST, ce qui pourrait créer des doublons.
+</Callout>
+
+Voici le flux complet :
+
+1. L'utilisateur remplit le formulaire et clique sur "Envoyer" → requête **POST**
+2. Flask traite les données et répond avec un **redirect** (code 302)
+3. Le navigateur suit la redirection et fait une requête **GET** vers la nouvelle URL
+4. Si l'utilisateur rafraîchit, c'est le **GET** qui est rejoué — pas le POST
+
+C'est une bonne pratique systématique : chaque fois qu'un formulaire POST est traité avec succès, redirige vers une page avec <InlineCode>redirect(url_for(...))</InlineCode>.

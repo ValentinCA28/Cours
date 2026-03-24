@@ -1,0 +1,186 @@
+---
+number: "02"
+title: "Jinja2 — Syntaxe"
+subtitle: "Maîtriser le moteur de templates Jinja2."
+---
+
+## Qu'est-ce que Jinja2 ?
+
+**Jinja2** est le moteur de templates utilisé par défaut par Flask. Il te permet de générer du HTML dynamique en mélangeant du HTML statique avec des données Python.
+
+Au lieu de construire ton HTML à la main dans tes fonctions Python (comme on l'a fait au chapitre précédent), tu crées des fichiers templates séparés. C'est plus propre, plus lisible et plus maintenable.
+
+## Les trois types de délimiteurs
+
+Jinja2 utilise trois types de balises spéciales dans tes fichiers HTML :
+
+| Délimiteur | Usage | Exemple |
+|---|---|---|
+| <InlineCode>{"{{ }}"}</InlineCode> | **Expressions** — Afficher une valeur | <InlineCode>{"{{ username }}"}</InlineCode> |
+| <InlineCode>{"{% %}"}</InlineCode> | **Instructions** — Logique (if, for…) | <InlineCode>{"{% if logged_in %}"}</InlineCode> |
+| <InlineCode>{"{# #}"}</InlineCode> | **Commentaires** — Ignorés au rendu | <InlineCode>{"{# Ceci est un commentaire #}"}</InlineCode> |
+
+Les **doubles accolades** affichent quelque chose dans la page. Les **accolades-pourcent** exécutent de la logique sans rien afficher. Les **accolades-dièse** sont des commentaires invisibles dans le HTML final.
+
+## Les variables
+
+Pour afficher une variable dans un template, tu l'entoures de doubles accolades :
+
+```jinja2
+<h1>Bonjour, {{ username }} !</h1>
+<p>Tu as {{ age }} ans.</p>
+```
+
+Tu peux accéder aux propriétés d'un objet et aux éléments d'une liste :
+
+```jinja2
+{# Accéder à un attribut d'objet #}
+<p>Nom : {{ user.name }}</p>
+<p>Email : {{ user.email }}</p>
+
+{# Accéder à un élément de liste par index #}
+<p>Premier fruit : {{ fruits[0] }}</p>
+<p>Dernier fruit : {{ fruits[-1] }}</p>
+```
+
+Côté Python, tu passes les variables au template avec <InlineCode>render_template()</InlineCode> :
+
+```python
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return render_template(
+        "index.html",
+        username="Alice",
+        age=25,
+        fruits=["Pomme", "Banane", "Cerise"]
+    )
+```
+
+<ExerciseById id="02-jinja-variable" />
+
+## Les conditions
+
+Les conditions te permettent d'afficher du contenu différent selon les données :
+
+```jinja2
+{% if logged_in %}
+    <p>Bienvenue, {{ username }} !</p>
+    <a href="/logout">Se déconnecter</a>
+{% else %}
+    <p>Tu n'es pas connecté.</p>
+    <a href="/login">Se connecter</a>
+{% endif %}
+```
+
+Tu peux aussi utiliser <InlineCode>elif</InlineCode> pour enchaîner les conditions :
+
+```jinja2
+{% if score >= 90 %}
+    <span class="badge">Excellent</span>
+{% elif score >= 70 %}
+    <span class="badge">Bien</span>
+{% elif score >= 50 %}
+    <span class="badge">Passable</span>
+{% else %}
+    <span class="badge">Insuffisant</span>
+{% endif %}
+```
+
+<Callout variant="info" title="Opérateurs disponibles">
+  Jinja2 supporte les opérateurs classiques : <InlineCode>==</InlineCode>, <InlineCode>!=</InlineCode>, <InlineCode>&gt;</InlineCode>, <InlineCode>&lt;</InlineCode>, <InlineCode>&gt;=</InlineCode>, <InlineCode>&lt;=</InlineCode>, <InlineCode>and</InlineCode>, <InlineCode>or</InlineCode>, <InlineCode>not</InlineCode>, <InlineCode>in</InlineCode> et <InlineCode>is</InlineCode>.
+</Callout>
+
+<ExerciseById id="02-jinja-condition" />
+
+## Les boucles
+
+Les boucles <InlineCode>for</InlineCode> permettent de parcourir une liste et de générer du HTML pour chaque élément :
+
+```jinja2
+<ul>
+{% for fruit in fruits %}
+    <li>{{ fruit }}</li>
+{% endfor %}
+</ul>
+```
+
+Jinja2 fournit une variable spéciale <InlineCode>loop</InlineCode> à l'intérieur des boucles avec des propriétés très pratiques :
+
+| Propriété | Description |
+|---|---|
+| <InlineCode>loop.index</InlineCode> | Numéro de l'itération (commence à 1) |
+| <InlineCode>loop.index0</InlineCode> | Numéro de l'itération (commence à 0) |
+| <InlineCode>loop.first</InlineCode> | <InlineCode>True</InlineCode> si c'est le premier élément |
+| <InlineCode>loop.last</InlineCode> | <InlineCode>True</InlineCode> si c'est le dernier élément |
+| <InlineCode>loop.length</InlineCode> | Nombre total d'éléments |
+
+```jinja2
+<table>
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Nom</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for student in students %}
+        <tr class="{% if loop.first %}first{% endif %}">
+            <td>{{ loop.index }}</td>
+            <td>{{ student }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+```
+
+<ExerciseById id="02-jinja-boucle" />
+
+## Les filtres
+
+Les **filtres** transforment une valeur avant de l'afficher. Tu les appliques avec le symbole pipe <InlineCode>|</InlineCode> :
+
+```jinja2
+{# Mettre en majuscules #}
+<p>{{ name|upper }}</p>
+
+{# Mettre en minuscules #}
+<p>{{ name|lower }}</p>
+
+{# Mettre la première lettre en majuscule #}
+<p>{{ name|capitalize }}</p>
+
+{# Tronquer un texte à 50 caractères #}
+<p>{{ description|truncate(50) }}</p>
+
+{# Compter le nombre d'éléments d'une liste #}
+<p>{{ items|length }} articles</p>
+
+{# Valeur par défaut si la variable est vide ou absente #}
+<p>{{ bio|default("Aucune bio renseignée.") }}</p>
+
+{# Chaîner plusieurs filtres #}
+<p>{{ name|trim|capitalize }}</p>
+```
+
+Les filtres les plus courants :
+
+| Filtre | Description | Exemple |
+|---|---|---|
+| <InlineCode>upper</InlineCode> | Tout en majuscules | <InlineCode>alice → ALICE</InlineCode> |
+| <InlineCode>lower</InlineCode> | Tout en minuscules | <InlineCode>ALICE → alice</InlineCode> |
+| <InlineCode>capitalize</InlineCode> | Première lettre majuscule | <InlineCode>alice → Alice</InlineCode> |
+| <InlineCode>truncate(n)</InlineCode> | Coupe après n caractères | <InlineCode>Un long texte... → Un long...</InlineCode> |
+| <InlineCode>length</InlineCode> | Nombre d'éléments | <InlineCode>[1, 2, 3] → 3</InlineCode> |
+| <InlineCode>default(val)</InlineCode> | Valeur si vide/absent | <InlineCode>None → "N/A"</InlineCode> |
+| <InlineCode>trim</InlineCode> | Supprime les espaces autour | <InlineCode>" alice " → "alice"</InlineCode> |
+| <InlineCode>join(sep)</InlineCode> | Joint une liste | <InlineCode>["a","b"] → "a, b"</InlineCode> |
+
+<ExerciseById id="02-jinja-filtre" />
+
+<Callout variant="info" title="Astuce">
+  Le filtre <InlineCode>|default</InlineCode> est très utile pour gérer les données manquantes. Plutôt que de vérifier chaque variable avec un <InlineCode>if</InlineCode>, tu peux directement fournir une valeur de secours : <InlineCode>{"{{ email|default('Non renseigné') }}"}</InlineCode>.
+</Callout>

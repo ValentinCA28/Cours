@@ -1,0 +1,190 @@
+---
+number: "04"
+title: "render_template"
+subtitle: "Connecter Flask et Jinja2 pour servir des pages dynamiques."
+---
+
+## La fonction `render_template()`
+
+Jusqu'ici, tu as renvoyé du HTML directement sous forme de chaîne de caractères dans tes routes Flask. Ça fonctionne, mais ce n'est pas du tout pratique pour des pages complètes. C'est là qu'intervient <InlineCode>render_template()</InlineCode> : elle fait le pont entre Flask et Jinja2 en **chargeant un fichier template** et en y injectant des données.
+
+### Import et utilisation de base
+
+Pour l'utiliser, il faut d'abord l'importer depuis Flask :
+
+```python
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    # Charge et renvoie le template index.html
+    return render_template("index.html")
+```
+
+<Callout variant="info" title="Où placer les templates ?">
+  Flask cherche les templates dans le dossier <InlineCode>/templates</InlineCode> et les fichiers statiques dans le dossier <InlineCode>/static</InlineCode>, tous deux situés à la racine de ton projet.
+</Callout>
+
+La structure de ton projet doit ressembler à ceci :
+
+```
+mon_projet/
+├── app.py
+├── templates/
+│   └── index.html
+└── static/
+    └── style.css
+```
+
+## Passer des variables au template
+
+La vraie puissance de <InlineCode>render_template()</InlineCode>, c'est de pouvoir **envoyer des données Python** vers ton template Jinja2. Tu passes les variables sous forme d'arguments nommés :
+
+```python
+@app.route("/")
+def home():
+    username = "Alice"
+    hobbies = ["Python", "Randonnée", "Cuisine"]
+
+    # Passe les variables au template
+    return render_template("index.html", name=username, items=hobbies)
+```
+
+Dans le template <InlineCode>index.html</InlineCode>, tu peux ensuite utiliser ces variables :
+
+```jinja2
+<h1>Bienvenue, {{ name }} !</h1>
+
+<ul>
+{% for item in items %}
+    <li>{{ item }}</li>
+{% endfor %}
+</ul>
+```
+
+Le nom à gauche du <InlineCode>=</InlineCode> est le nom utilisé **dans le template**, et la valeur à droite est la variable **Python**. Tu peux passer autant de variables que nécessaire.
+
+<ExerciseById id="04-render" />
+
+## Les routes dynamiques
+
+Flask te permet de créer des **routes dynamiques** qui capturent une partie de l'URL comme variable. Tu utilises des chevrons <InlineCode>&lt;variable_name&gt;</InlineCode> dans la définition de la route :
+
+```python
+@app.route("/user/<username>")
+def user_profile(username):
+    # username contient la valeur capturée depuis l'URL
+    return render_template("profile.html", username=username)
+```
+
+Si tu visites <InlineCode>/user/Alice</InlineCode>, la variable <InlineCode>username</InlineCode> vaudra <InlineCode>"Alice"</InlineCode>.
+
+### Les convertisseurs de type
+
+Par défaut, les variables capturées sont des **chaînes de caractères**. Tu peux forcer un type avec un convertisseur :
+
+| Convertisseur | Description | Exemple |
+|---|---|---|
+| `string` | Chaîne (par défaut) | `<string:name>` |
+| `int` | Entier | `<int:id>` |
+| `float` | Nombre décimal | `<float:price>` |
+
+```python
+# Accepte uniquement un entier — /product/42 fonctionne, /product/abc renvoie 404
+@app.route("/product/<int:id>")
+def product(id):
+    return render_template("product.html", product_id=id)
+
+# Accepte un nombre décimal
+@app.route("/price/<float:price>")
+def show_price(price):
+    return render_template("price.html", price=price)
+
+# Explicitement une chaîne (identique au comportement par défaut)
+@app.route("/hello/<string:name>")
+def hello(name):
+    return render_template("hello.html", name=name)
+```
+
+Si l'URL ne correspond pas au type attendu (par exemple <InlineCode>/product/abc</InlineCode> avec <InlineCode>&lt;int:id&gt;</InlineCode>), Flask renvoie automatiquement une **erreur 404**.
+
+<ExerciseById id="04-route-dynamique" />
+
+## Exemple complet : page de profil utilisateur
+
+Mettons tout ensemble avec une mini-page de profil. Voici le code Python :
+
+```python
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+# Données simulées (en vrai, ça viendrait d'une base de données)
+users = {
+    "alice": {"full_name": "Alice Dupont", "age": 28, "city": "Paris"},
+    "bob": {"full_name": "Bob Martin", "age": 34, "city": "Lyon"},
+}
+
+@app.route("/user/<username>")
+def profile(username):
+    # Cherche l'utilisateur dans le dictionnaire
+    user = users.get(username)
+    if user is None:
+        return "Utilisateur non trouvé", 404
+
+    return render_template("profile.html", username=username, user=user)
+```
+
+Et le template <InlineCode>templates/profile.html</InlineCode> :
+
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Profil de {{ username }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>{{ user.full_name }}</h1>
+    <ul>
+        <li>Âge : {{ user.age }} ans</li>
+        <li>Ville : {{ user.city }}</li>
+    </ul>
+    <a href="/">Retour à l'accueil</a>
+</body>
+</html>
+```
+
+En visitant <InlineCode>/user/alice</InlineCode>, Flask capture <InlineCode>"alice"</InlineCode>, récupère ses données, et injecte le tout dans le template. Le résultat est une **page HTML complète** générée côté serveur.
+
+## Les fichiers statiques
+
+Les fichiers statiques (CSS, images, JavaScript côté client) sont servis depuis le dossier <InlineCode>/static</InlineCode>. Pour générer le bon chemin vers ces fichiers dans tes templates, utilise la fonction <InlineCode>url_for()</InlineCode> :
+
+```jinja2
+<!-- Lien vers une feuille de style -->
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<!-- Lien vers une image -->
+<img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo">
+
+<!-- Lien vers un script JavaScript -->
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+```
+
+Pourquoi utiliser <InlineCode>url_for()</InlineCode> plutôt qu'un chemin en dur comme <InlineCode>/static/style.css</InlineCode> ? Parce que <InlineCode>url_for()</InlineCode> génère le chemin correct **même si tu changes la configuration** du dossier statique. C'est une bonne pratique à adopter dès le début.
+
+```
+mon_projet/
+├── app.py
+├── templates/
+│   ├── index.html
+│   └── profile.html
+└── static/
+    ├── style.css
+    └── images/
+        └── logo.png
+```

@@ -1,0 +1,101 @@
+---
+number: "00"
+title: "SSR vs CSR"
+subtitle: "Comprendre le Server-Side Rendering et ses différences avec le Client-Side Rendering."
+---
+
+## Qu'est-ce que le Server-Side Rendering (SSR) ?
+
+Le **Server-Side Rendering** (SSR) est une technique où le serveur génère la **page HTML complète** avant de l'envoyer au navigateur. Quand tu visites une URL, le serveur exécute du code (ici, Python), construit le HTML avec toutes les données, et envoie le résultat final au navigateur.
+
+Le navigateur reçoit donc une page **prête à afficher**. Pas besoin d'attendre du JavaScript pour voir le contenu.
+
+```
+Navigateur                    Serveur
+    |                            |
+    |--- Requête HTTP GET ------>|
+    |                            | ← Le serveur génère le HTML complet
+    |<--- Page HTML complète ----|
+    |                            |
+    ✅ La page s'affiche
+       immédiatement
+```
+
+C'est comme ça que le web a fonctionné pendant des années : chaque page est **construite côté serveur** et envoyée telle quelle.
+
+## Qu'est-ce que le Client-Side Rendering (CSR) ?
+
+Le **Client-Side Rendering** (CSR) fonctionne différemment. Le serveur envoie une page HTML quasi vide accompagnée d'un gros fichier JavaScript. C'est ensuite le **navigateur** qui exécute ce JavaScript pour construire la page.
+
+```
+Navigateur                    Serveur
+    |                            |
+    |--- Requête HTTP GET ------>|
+    |<--- HTML minimal + JS -----|
+    |                            |
+    ⏳ Le navigateur exécute
+       le JavaScript...
+    |                            |
+    |--- Requêtes API (données)->|
+    |<--- Données JSON ----------|
+    |                            |
+    ✅ La page s'affiche
+       (après exécution du JS)
+```
+
+Des frameworks comme React, Vue ou Angular fonctionnent par défaut en CSR. La page reste vide tant que le JavaScript n'a pas terminé son travail.
+
+## Comparaison visuelle
+
+| Critère | SSR | CSR |
+|---|---|---|
+| **Premier affichage** | Rapide (HTML prêt) | Plus lent (attente du JS) |
+| **SEO** | Excellent (contenu visible) | Problématique (page vide au départ) |
+| **Interactivité** | Rechargement par page | Transitions fluides (SPA) |
+| **Charge serveur** | Plus élevée (génère chaque page) | Plus faible après le chargement initial |
+| **Fonctionne sans JS** | Oui | Non |
+
+## Avantages du SSR
+
+Le SSR brille dans plusieurs situations :
+
+- **SEO** — Les moteurs de recherche (Google, Bing) voient directement le contenu complet de la page. Pas besoin d'exécuter du JavaScript pour indexer ton site.
+- **Premier affichage rapide** — L'utilisateur voit le contenu dès que le HTML arrive. Pas d'écran blanc pendant le chargement du JS.
+- **Fonctionne sans JavaScript** — Si l'utilisateur a désactivé JavaScript (ou si le script plante), la page reste lisible.
+- **Accessibilité** — Les lecteurs d'écran et les technologies d'assistance reçoivent du contenu structuré immédiatement.
+
+## Avantages du CSR
+
+Le CSR a aussi ses forces :
+
+- **Interactivité riche** — Les transitions entre pages sont instantanées, sans rechargement complet. L'expérience est fluide, proche d'une application native.
+- **Moins de charge serveur** — Après le chargement initial, le serveur n'a plus qu'à fournir des données (API JSON). Le navigateur fait le gros du travail.
+- **Expérience SPA** — Une Single Page Application ne recharge jamais la page entière. Les interactions (filtres, onglets, modales) sont instantanées.
+
+## Quand utiliser quoi ?
+
+Le choix dépend du type de projet :
+
+<Badge>SSR recommandé</Badge>
+
+- Sites de contenu (blogs, documentation)
+- Sites e-commerce (les fiches produits doivent être indexées)
+- Sites vitrines et landing pages
+- Tout projet où le **SEO** est important
+
+<Badge>CSR recommandé</Badge>
+
+- Dashboards et outils internes
+- Applications métier (CRM, ERP)
+- Applications temps réel (chat, collaboration)
+- Tout projet où l'**interactivité** prime sur le référencement
+
+<Callout variant="info" title="Notre stack pour ce cours">
+  Dans ce cours, on utilise **Flask + Jinja2** pour le SSR en Python. Flask est un micro-framework web léger, et Jinja2 est son moteur de templates. Ensemble, ils permettent de générer des pages HTML dynamiques côté serveur de manière simple et efficace.
+</Callout>
+
+## En résumé
+
+Le SSR génère le HTML sur le serveur, le CSR le génère dans le navigateur. Chaque approche a ses forces. Pour un site où le contenu doit être visible immédiatement et bien référencé, le SSR est le choix naturel — et c'est exactement ce qu'on va apprendre à faire avec Python.
+
+<ExerciseById id="00-ssr-avantage" />

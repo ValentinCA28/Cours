@@ -1,0 +1,153 @@
+---
+number: "01"
+title: "Flask — Les bases"
+subtitle: "Installer Flask et créer ta première application web Python."
+---
+
+## Qu'est-ce que Flask ?
+
+Flask est un **micro-framework** Python pour le développement web. "Micro" ne veut pas dire limité — ça signifie que Flask te donne l'essentiel sans t'imposer une architecture rigide. Tu gardes le contrôle total sur la structure de ton projet.
+
+Flask est utilisé par des entreprises comme Netflix, Reddit et Lyft. Il est léger, bien documenté, et parfait pour apprendre le SSR.
+
+## Installation
+
+Pour installer Flask, tu utilises <InlineCode>pip</InlineCode>, le gestionnaire de paquets Python :
+
+```python
+pip install flask
+```
+
+<Callout variant="info" title="Environnement virtuel">
+  C'est une bonne pratique de créer un environnement virtuel avant d'installer des paquets. Utilise <InlineCode>python -m venv venv</InlineCode> puis <InlineCode>source venv/bin/activate</InlineCode> (Linux/Mac) ou <InlineCode>venv\Scripts\activate</InlineCode> (Windows).
+</Callout>
+
+## Hello World — Ta première app Flask
+
+Crée un fichier <InlineCode>app.py</InlineCode> avec ce contenu :
+
+```python
+from flask import Flask
+
+# Créer l'application Flask
+app = Flask(__name__)
+
+# Définir une route pour la page d'accueil
+@app.route("/")
+def home():
+    return "<h1>Bonjour le monde !</h1>"
+```
+
+<Callout variant="success" title="Décortiquons ce code">
+  1. <InlineCode>from flask import Flask</InlineCode> — On importe la classe Flask depuis le module flask.
+  2. <InlineCode>app = Flask(__name__)</InlineCode> — On crée une instance de l'application. Le <InlineCode>__name__</InlineCode> indique à Flask où trouver les fichiers du projet.
+  3. <InlineCode>@app.route("/")</InlineCode> — Ce décorateur lie l'URL <InlineCode>/</InlineCode> à la fonction qui suit.
+  4. <InlineCode>def home()</InlineCode> — Cette fonction est appelée quand un utilisateur visite <InlineCode>/</InlineCode>. Elle retourne du HTML.
+</Callout>
+
+## Les routes
+
+Une **route** est une URL associée à une fonction Python. Le décorateur <InlineCode>@app.route()</InlineCode> fait le lien entre les deux.
+
+```python
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "<h1>Accueil</h1>"
+
+@app.route("/about")
+def about():
+    return "<h1>À propos</h1>"
+
+@app.route("/contact")
+def contact():
+    return "<h1>Contact</h1>"
+```
+
+Chaque URL a sa propre fonction. Quand un utilisateur visite <InlineCode>/about</InlineCode>, Flask appelle la fonction <InlineCode>about()</InlineCode> et renvoie le résultat au navigateur.
+
+<ExerciseById id="01-flask-route" />
+
+## Lancer l'application
+
+Pour démarrer ton serveur Flask, ajoute ces lignes à la fin de ton fichier :
+
+```python
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+Puis exécute le fichier :
+
+```python
+python app.py
+```
+
+Flask démarre un serveur local sur <InlineCode>http://127.0.0.1:5000</InlineCode>. Ouvre cette URL dans ton navigateur pour voir ta page.
+
+Le paramètre <InlineCode>debug=True</InlineCode> active le **mode debug** qui offre deux avantages majeurs :
+
+- **Rechargement automatique** — Quand tu modifies ton code, le serveur redémarre tout seul. Pas besoin de l'arrêter et le relancer manuellement.
+- **Messages d'erreur détaillés** — En cas de bug, Flask affiche un traceback complet dans le navigateur avec un débogueur interactif.
+
+<ExerciseById id="01-flask-run" />
+
+<Callout variant="warn" title="Sécurité">
+  Ne jamais utiliser <InlineCode>debug=True</InlineCode> en production ! Le débogueur interactif permet d'exécuter du code Python arbitraire sur ton serveur. C'est une faille de sécurité critique.
+</Callout>
+
+## Les méthodes HTTP
+
+Par défaut, une route Flask n'accepte que les requêtes **GET**. Pour accepter d'autres méthodes (comme POST pour les formulaires), tu dois le spécifier :
+
+```python
+from flask import Flask, request
+
+app = Flask(__name__)
+
+# Cette route accepte GET et POST
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        # Traiter les données du formulaire
+        username = request.form["username"]
+        return f"<p>Bienvenue, {username} !</p>"
+    # Afficher le formulaire (GET)
+    return """
+        <form method="POST">
+            <input name="username" placeholder="Ton nom">
+            <button type="submit">Se connecter</button>
+        </form>
+    """
+```
+
+- **GET** — Récupérer une page (par défaut). Le navigateur demande une ressource.
+- **POST** — Envoyer des données (formulaire, création). Le navigateur envoie des informations au serveur.
+
+## Les paramètres d'URL
+
+Flask permet de capturer des parties de l'URL comme variables grâce aux **chevrons** :
+
+```python
+@app.route("/user/<username>")
+def profile(username):
+    return f"<h1>Profil de {username}</h1>"
+
+@app.route("/article/<int:article_id>")
+def article(article_id):
+    return f"<h1>Article n°{article_id}</h1>"
+```
+
+Les **convertisseurs de type** permettent de valider automatiquement les paramètres :
+
+| Convertisseur | Description | Exemple |
+|---|---|---|
+| <InlineCode>string</InlineCode> | Texte sans slash (par défaut) | <InlineCode>/user/alice</InlineCode> |
+| <InlineCode>int</InlineCode> | Nombre entier | <InlineCode>/article/42</InlineCode> |
+| <InlineCode>float</InlineCode> | Nombre décimal | <InlineCode>/price/9.99</InlineCode> |
+| <InlineCode>path</InlineCode> | Texte avec slashes | <InlineCode>/files/docs/cv.pdf</InlineCode> |
+
+Si un utilisateur visite <InlineCode>/article/hello</InlineCode> avec le convertisseur <InlineCode>int</InlineCode>, Flask renvoie automatiquement une erreur 404 car "hello" n'est pas un entier.

@@ -1,0 +1,290 @@
+---
+number: "06"
+title: "SQLite avec Flask"
+subtitle: "Stocker et requêter des données avec SQLite."
+---
+
+## Qu'est-ce que SQLite ?
+
+SQLite est un moteur de base de données **léger** et **autonome**. Contrairement à MySQL ou PostgreSQL, il ne nécessite **aucun serveur** — toute la base de données est stockée dans un **seul fichier** (par exemple <InlineCode>database.db</InlineCode>). C'est la solution idéale pour les projets de petite à moyenne taille, le prototypage, et l'apprentissage.
+
+Avantages principaux :
+- **Aucune installation** : le module <InlineCode>sqlite3</InlineCode> est intégré à Python
+- **Aucune configuration** : pas de serveur à démarrer
+- **Portable** : un seul fichier que tu peux copier ou déplacer
+
+## Le module `sqlite3`
+
+Python fournit le module <InlineCode>sqlite3</InlineCode> dans sa bibliothèque standard. Voici le workflow de base pour interagir avec une base de données :
+
+```python
+import sqlite3
+
+# 1. Se connecter (crée le fichier s'il n'existe pas)
+connection = sqlite3.connect("database.db")
+
+# 2. Créer un curseur (objet qui exécute les requêtes)
+cursor = connection.cursor()
+
+# 3. Exécuter une requête SQL
+cursor.execute("SELECT * FROM users")
+
+# 4. Récupérer les résultats
+results = cursor.fetchall()
+
+# 5. Fermer la connexion
+connection.close()
+```
+
+## Créer une table
+
+Avant de stocker des données, il faut créer la structure. Utilise <InlineCode>CREATE TABLE IF NOT EXISTS</InlineCode> pour éviter les erreurs si la table existe déjà :
+
+```python
+import sqlite3
+
+connection = sqlite3.connect("database.db")
+cursor = connection.cursor()
+
+# Créer la table users
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        age INTEGER
+    )
+""")
+
+# Sauvegarder les changements
+connection.commit()
+connection.close()
+```
+
+<InlineCode>connection.commit()</InlineCode> est indispensable pour **sauvegarder** les modifications. Sans lui, les changements sont perdus à la fermeture de la connexion.
+
+## Les opérations CRUD
+
+CRUD signifie **Create, Read, Update, Delete** — les quatre opérations fondamentales sur les données.
+
+### Create — Insérer des données
+
+```python
+cursor.execute("""
+    INSERT INTO users (name, email, age)
+    VALUES (?, ?, ?)
+""", ("Alice", "alice@example.com", 28))
+
+connection.commit()
+```
+
+### Read — Lire des données
+
+```python
+# Récupérer tous les utilisateurs
+cursor.execute("SELECT * FROM users")
+all_users = cursor.fetchall()
+
+# Récupérer un seul utilisateur
+cursor.execute("SELECT * FROM users WHERE id = ?", (1,))
+one_user = cursor.fetchone()
+```
+
+### Update — Modifier des données
+
+```python
+cursor.execute("""
+    UPDATE users SET age = ? WHERE id = ?
+""", (29, 1))
+
+connection.commit()
+```
+
+### Delete — Supprimer des données
+
+```python
+cursor.execute("DELETE FROM users WHERE id = ?", (1,))
+
+connection.commit()
+```
+
+<ExerciseById id="06-sqlite-connect" />
+
+## Attention aux injections SQL
+
+<Callout variant="warn" title="Ne JAMAIS utiliser les f-strings avec SQL">
+  Ne concatène JAMAIS des variables directement dans une requête SQL. C'est une faille de sécurité critique appelée **injection SQL** qui permet à un attaquant d'exécuter du code SQL arbitraire.
+</Callout>
+
+Voici ce qu'il ne faut **jamais** faire :
+
+```python
+# DANGEREUX — injection SQL possible !
+user_id = request.args.get("id")
+cursor.execute(f"SELECT * FROM users WHERE id = {user_id}")
+
+# DANGEREUX aussi — même problème
+cursor.execute("SELECT * FROM users WHERE id = " + user_id)
+
+# DANGEREUX encore — format() n'est pas mieux
+cursor.execute("SELECT * FROM users WHERE id = {}".format(user_id))
+```
+
+Si un utilisateur malveillant envoie <InlineCode>id=1 OR 1=1</InlineCode>, la requête devient <InlineCode>SELECT * FROM users WHERE id = 1 OR 1=1</InlineCode> — ce qui retourne **tous** les utilisateurs.
+
+### La solution : les requêtes paramétrées
+
+Utilise toujours des **placeholders** <InlineCode>?</InlineCode> et passe les valeurs séparément :
+
+```python
+# SÉCURISÉ — requête paramétrée
+user_id = request.args.get("id")
+cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+```
+
+SQLite échappe automatiquement les valeurs, ce qui rend l'injection impossible.
+
+<ExerciseById id="06-sqlite-param" />
+
+## Accès par nom de colonne avec `sqlite3.Row`
+
+Par défaut, <InlineCode>fetchall()</InlineCode> et <InlineCode>fetchone()</InlineCode> retournent des **tuples** :
+
+```python
+cursor.execute("SELECT * FROM users WHERE id = ?", (1,))
+user = cursor.fetchone()
+# user = (1, "Alice", "alice@example.com", 28)
+# user[0] = id, user[1] = name... pas très lisible !
+```
+
+En activant <InlineCode>sqlite3.Row</InlineCode> comme <InlineCode>row_factory</InlineCode>, tu obtiens des objets qui se comportent comme des dictionnaires :
+
+```python
+connection = sqlite3.connect("database.db")
+connection.row_factory = sqlite3.Row  # Activer l'accès par nom
+
+cursor = connection.cursor()
+cursor.execute("SELECT * FROM users WHERE id = ?", (1,))
+user = cursor.fetchone()
+
+# Accès par nom de colonne — beaucoup plus lisible
+print(user["name"])   # "Alice"
+print(user["email"])  # "alice@example.com"
+print(user["age"])    # 28
+```
+
+<Callout variant="success" title="Astuce : sqlite3.Row">
+  <InlineCode>sqlite3.Row</InlineCode> te permet d'accéder aux colonnes par nom (<InlineCode>row['name']</InlineCode>) au lieu d'index (<InlineCode>row[0]</InlineCode>). C'est plus lisible, plus maintenable, et ça fonctionne aussi dans les templates Jinja2.
+</Callout>
+
+## Exemple complet : Flask + SQLite
+
+Voici un exemple qui combine Flask, SQLite et Jinja2 pour afficher une liste d'utilisateurs depuis la base de données.
+
+Le fichier <InlineCode>app.py</InlineCode> :
+
+```python
+import sqlite3
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+def get_db_connection():
+    """Crée et retourne une connexion à la base de données."""
+    connection = sqlite3.connect("database.db")
+    connection.row_factory = sqlite3.Row
+    return connection
+
+def init_db():
+    """Initialise la base de données avec des données de test."""
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            age INTEGER
+        )
+    """)
+
+    # Insérer des données de test si la table est vide
+    cursor.execute("SELECT COUNT(*) FROM users")
+    if cursor.fetchone()[0] == 0:
+        cursor.executemany(
+            "INSERT INTO users (name, email, age) VALUES (?, ?, ?)",
+            [
+                ("Alice", "alice@example.com", 28),
+                ("Bob", "bob@example.com", 34),
+                ("Charlie", "charlie@example.com", 22),
+            ]
+        )
+
+    connection.commit()
+    connection.close()
+
+# Initialiser la base au démarrage
+init_db()
+
+@app.route("/users")
+def user_list():
+    connection = get_db_connection()
+    users = connection.execute("SELECT * FROM users").fetchall()
+    connection.close()
+
+    return render_template("users.html", users=users)
+
+@app.route("/user/<int:user_id>")
+def user_detail(user_id):
+    connection = get_db_connection()
+    user = connection.execute(
+        "SELECT * FROM users WHERE id = ?", (user_id,)
+    ).fetchone()
+    connection.close()
+
+    if user is None:
+        return "Utilisateur non trouvé", 404
+
+    return render_template("user_detail.html", user=user)
+```
+
+Le template <InlineCode>templates/users.html</InlineCode> :
+
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Liste des utilisateurs</title>
+</head>
+<body>
+    <h1>Utilisateurs</h1>
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Âge</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user['id'] }}</td>
+                <td>
+                    <a href="/user/{{ user['id'] }}">{{ user['name'] }}</a>
+                </td>
+                <td>{{ user['email'] }}</td>
+                <td>{{ user['age'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
+```
+
+Ce pattern — fonction <InlineCode>get_db_connection()</InlineCode> + <InlineCode>row_factory</InlineCode> + fermeture de la connexion — est le pattern standard pour utiliser SQLite avec Flask. Tu le retrouveras dans de nombreux tutoriels et projets.

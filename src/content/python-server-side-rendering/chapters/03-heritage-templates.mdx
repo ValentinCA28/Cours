@@ -1,0 +1,227 @@
+---
+number: "03"
+title: "Héritage de templates"
+subtitle: "Réutiliser et structurer tes templates avec extends, block et include."
+---
+
+## Pourquoi l'héritage de templates ?
+
+Imagine un site avec 10 pages. Chaque page a le même header, le même menu de navigation, le même footer, et la même structure HTML de base. Sans héritage, tu devrais **copier-coller** tout ce code dans chaque fichier. Et si tu veux changer le menu ? Tu dois modifier 10 fichiers.
+
+L'héritage de templates applique le principe **DRY** (Don't Repeat Yourself) : tu définis la structure commune **une seule fois** dans un template de base, et chaque page ne contient que ce qui lui est propre.
+
+## Le template de base
+
+Le template de base (souvent appelé <InlineCode>base.html</InlineCode>) contient la structure HTML complète avec des **blocs** que les pages enfants pourront remplir :
+
+```html
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Mon site{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav>
+        <a href="/">Accueil</a>
+        <a href="/about">À propos</a>
+        <a href="/contact">Contact</a>
+    </nav>
+
+    <main>
+        {% block content %}
+        <!-- Le contenu de chaque page ira ici -->
+        {% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Mon site</p>
+    </footer>
+
+    {% block scripts %}
+    <!-- Les scripts spécifiques à chaque page iront ici -->
+    {% endblock %}
+</body>
+</html>
+```
+
+Les balises <InlineCode>{"{% block nom %}...{% endblock %}"}</InlineCode> définissent des **zones remplaçables**. Le contenu entre les balises est la valeur par défaut (utilisée si la page enfant ne remplace pas le bloc).
+
+## Les templates enfants
+
+Un template enfant **hérite** du template de base avec <InlineCode>{"{% extends %}"}</InlineCode> et remplit les blocs :
+
+```html
+<!-- templates/index.html -->
+{% extends "base.html" %}
+
+{% block title %}Accueil — Mon site{% endblock %}
+
+{% block content %}
+<h1>Bienvenue sur mon site !</h1>
+<p>Ceci est la page d'accueil.</p>
+{% endblock %}
+```
+
+Flask génère alors la page complète : la structure de <InlineCode>base.html</InlineCode> avec le contenu de <InlineCode>index.html</InlineCode> injecté dans les blocs.
+
+Côté Python, rien ne change :
+
+```python
+@app.route("/")
+def home():
+    return render_template("index.html")
+```
+
+Flask sait automatiquement que <InlineCode>index.html</InlineCode> étend <InlineCode>base.html</InlineCode> et fait l'assemblage.
+
+<ExerciseById id="03-extends" />
+
+## Plusieurs blocs
+
+Tu peux définir autant de blocs que nécessaire. Voici un exemple avec plusieurs zones :
+
+```html
+<!-- templates/article.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ article.title }} — Mon site{% endblock %}
+
+{% block content %}
+<article>
+    <h1>{{ article.title }}</h1>
+    <p class="date">Publié le {{ article.date }}</p>
+    <div class="body">
+        {{ article.body }}
+    </div>
+</article>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/highlight.js"></script>
+{% endblock %}
+```
+
+Chaque bloc est **indépendant**. Tu peux remplir uniquement ceux dont tu as besoin — les autres garderont leur valeur par défaut.
+
+## Include — Les composants réutilisables
+
+Parfois, tu veux réutiliser un **morceau de HTML** dans plusieurs templates sans passer par l'héritage. C'est le rôle de <InlineCode>{"{% include %}"}</InlineCode>.
+
+```html
+<!-- templates/partials/nav.html -->
+<nav>
+    <a href="/">Accueil</a>
+    <a href="/about">À propos</a>
+    <a href="/contact">Contact</a>
+</nav>
+```
+
+```html
+<!-- templates/partials/footer.html -->
+<footer>
+    <p>&copy; 2026 Mon site — Tous droits réservés</p>
+</footer>
+```
+
+Tu inclus ces partiels dans ton template de base :
+
+```html
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Mon site{% endblock %}</title>
+</head>
+<body>
+    {% include "partials/nav.html" %}
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    {% include "partials/footer.html" %}
+</body>
+</html>
+```
+
+L'avantage : si tu modifies la navigation dans <InlineCode>partials/nav.html</InlineCode>, le changement se répercute automatiquement partout où ce fichier est inclus.
+
+<ExerciseById id="03-include" />
+
+<Callout variant="success" title="L'analogie du puzzle">
+  Pense à ton layout comme un puzzle — <InlineCode>base.html</InlineCode> est le cadre, chaque page remplit les pièces avec <InlineCode>{"{% block %}"}</InlineCode>, et les <InlineCode>{"{% include %}"}</InlineCode> sont des pièces prédécoupées que tu peux placer n'importe où.
+</Callout>
+
+## Exemple complet
+
+Voici un projet complet avec héritage et includes pour bien visualiser comment tout s'assemble :
+
+```python
+# app.py
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return render_template("index.html", title="Accueil")
+
+@app.route("/about")
+def about():
+    return render_template("about.html", title="À propos")
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+```html
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }} — MonSite</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    {% include "partials/nav.html" %}
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    {% include "partials/footer.html" %}
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+```
+
+```html
+<!-- templates/index.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Bienvenue !</h1>
+<p>Ceci est un site construit avec Flask et Jinja2.</p>
+<p>L'héritage de templates permet de ne pas répéter le code commun.</p>
+{% endblock %}
+```
+
+```html
+<!-- templates/about.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<h1>À propos</h1>
+<p>Ce site est un exemple de Server-Side Rendering avec Python.</p>
+<p>Il utilise Flask comme framework et Jinja2 comme moteur de templates.</p>
+{% endblock %}
+```
+
+Les deux pages partagent la même navigation, le même footer et la même structure HTML. Seul le contenu du bloc <InlineCode>content</InlineCode> change. Si tu veux ajouter un lien dans le menu, tu modifies uniquement <InlineCode>partials/nav.html</InlineCode>.

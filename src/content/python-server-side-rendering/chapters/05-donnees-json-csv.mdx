@@ -1,0 +1,254 @@
+---
+number: "05"
+title: "Données JSON & CSV"
+subtitle: "Charger et afficher des données depuis des fichiers JSON et CSV."
+---
+
+## Pourquoi utiliser des données externes ?
+
+Jusqu'ici, les données étaient écrites directement dans le code Python (des dictionnaires, des listes…). Dans un vrai projet, les données viennent de **sources externes** : fichiers, bases de données, APIs. Séparer les données de la présentation est un principe fondamental — ça te permet de **modifier les données sans toucher au code**, et vice versa.
+
+Dans ce chapitre, tu vas apprendre à charger des données depuis deux formats très courants : **JSON** et **CSV**.
+
+## Le format JSON
+
+### Qu'est-ce que JSON ?
+
+JSON (**JavaScript Object Notation**) est un format de données textuel, léger et lisible. Il est utilisé partout : APIs web, fichiers de configuration, échange de données entre applications. Sa syntaxe ressemble beaucoup aux dictionnaires et listes Python :
+
+```json
+{
+    "name": "Laptop Pro",
+    "price": 999.99,
+    "in_stock": true,
+    "tags": ["informatique", "portable"]
+}
+```
+
+### Le module `json` de Python
+
+Python inclut un module <InlineCode>json</InlineCode> dans sa bibliothèque standard — pas besoin d'installer quoi que ce soit.
+
+Les deux fonctions principales pour **lire** du JSON :
+
+| Fonction | Source | Usage |
+|---|---|---|
+| `json.load(file)` | Fichier ouvert | Lire un fichier `.json` |
+| `json.loads(string)` | Chaîne de caractères | Parser une string JSON |
+
+```python
+import json
+
+# Lire depuis un fichier
+with open("data/products.json", "r") as file:
+    products = json.load(file)
+
+# Lire depuis une chaîne de caractères
+json_string = '{"name": "Alice", "age": 28}'
+data = json.loads(json_string)
+```
+
+Le <InlineCode>s</InlineCode> à la fin de <InlineCode>json.loads()</InlineCode> signifie **"string"** — c'est un bon moyen mnémotechnique pour ne pas confondre les deux.
+
+<ExerciseById id="05-json-load" />
+
+### Exemple complet : afficher des produits depuis un fichier JSON
+
+Voici un exemple de bout en bout. D'abord, le fichier <InlineCode>data/products.json</InlineCode> :
+
+```json
+[
+    {
+        "name": "Laptop Pro",
+        "price": 999.99,
+        "category": "Informatique"
+    },
+    {
+        "name": "Casque Audio",
+        "price": 79.90,
+        "category": "Audio"
+    },
+    {
+        "name": "Clavier Mécanique",
+        "price": 129.00,
+        "category": "Informatique"
+    }
+]
+```
+
+Ensuite, la route Flask dans <InlineCode>app.py</InlineCode> :
+
+```python
+import json
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+@app.route("/products")
+def products():
+    # Charger les produits depuis le fichier JSON
+    with open("data/products.json", "r") as file:
+        product_list = json.load(file)
+
+    return render_template("products.html", products=product_list)
+```
+
+Et enfin, le template <InlineCode>templates/products.html</InlineCode> :
+
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Nos Produits</title>
+</head>
+<body>
+    <h1>Catalogue de produits</h1>
+
+    {% for product in products %}
+    <div class="product-card">
+        <h2>{{ product.name }}</h2>
+        <p>Catégorie : {{ product.category }}</p>
+        <p>Prix : {{ product.price }} €</p>
+    </div>
+    {% endfor %}
+</body>
+</html>
+```
+
+Le fichier JSON est lu par Python, converti en liste de dictionnaires, puis passé au template où Jinja2 le parcourt avec une boucle <InlineCode>{"{% for %}"}</InlineCode>.
+
+## Le format CSV
+
+### Qu'est-ce que CSV ?
+
+CSV (**Comma-Separated Values**) est un format tabulaire simple où chaque ligne représente un enregistrement et les valeurs sont séparées par des virgules (ou des points-virgules). C'est le format standard des tableurs (Excel, Google Sheets) :
+
+```
+name,age,city
+Alice,28,Paris
+Bob,34,Lyon
+Charlie,22,Marseille
+```
+
+### Le module `csv` de Python
+
+Python fournit aussi un module <InlineCode>csv</InlineCode> intégré. Il y a deux façons de lire un fichier CSV :
+
+### `csv.reader` — lecture simple
+
+Retourne chaque ligne sous forme de **liste** :
+
+```python
+import csv
+
+with open("data/students.csv", "r") as file:
+    reader = csv.reader(file)
+    header = next(reader)  # Sauter la ligne d'en-tête
+    for row in reader:
+        # row est une liste : ["Alice", "28", "Paris"]
+        print(row[0], row[1], row[2])
+```
+
+### `csv.DictReader` — lecture par nom de colonne <Badge>recommandé</Badge>
+
+Retourne chaque ligne sous forme de **dictionnaire**, en utilisant la première ligne comme clés :
+
+```python
+import csv
+
+with open("data/students.csv", "r") as file:
+    reader = csv.DictReader(file)
+    for row in reader:
+        # row est un dictionnaire : {"name": "Alice", "age": "28", "city": "Paris"}
+        print(row["name"], row["age"], row["city"])
+```
+
+<InlineCode>DictReader</InlineCode> est fortement recommandé car ton code est **plus lisible** (<InlineCode>row["name"]</InlineCode> vs <InlineCode>row[0]</InlineCode>) et **plus robuste** : si tu ajoutes une colonne au CSV, ton code existant continue de fonctionner.
+
+<ExerciseById id="05-csv-reader" />
+
+### Exemple complet : afficher des étudiants depuis un fichier CSV
+
+Le fichier <InlineCode>data/students.csv</InlineCode> :
+
+```
+name,age,city,grade
+Alice,28,Paris,A
+Bob,34,Lyon,B
+Charlie,22,Marseille,A
+Diana,26,Toulouse,C
+```
+
+La route Flask :
+
+```python
+import csv
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+@app.route("/students")
+def students():
+    student_list = []
+
+    # Charger les étudiants depuis le fichier CSV
+    with open("data/students.csv", "r") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            student_list.append(row)
+
+    return render_template("students.html", students=student_list)
+```
+
+Le template <InlineCode>templates/students.html</InlineCode> avec un tableau HTML :
+
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Liste des étudiants</title>
+</head>
+<body>
+    <h1>Étudiants</h1>
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Âge</th>
+                <th>Ville</th>
+                <th>Note</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+            <tr>
+                <td>{{ student.name }}</td>
+                <td>{{ student.age }}</td>
+                <td>{{ student.city }}</td>
+                <td>{{ student.grade }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
+```
+
+<Callout variant="warn" title="Toujours fermer les fichiers">
+  Toujours utiliser <InlineCode>with open()</InlineCode> pour ouvrir les fichiers — ça garantit qu'ils sont fermés proprement, même en cas d'erreur. Ne fais jamais <InlineCode>f = open(...)</InlineCode> sans <InlineCode>with</InlineCode>.
+</Callout>
+
+## JSON vs CSV : lequel choisir ?
+
+| Critère | JSON | CSV |
+|---|---|---|
+| **Structure** | Hiérarchique (objets imbriqués) | Tabulaire (lignes et colonnes) |
+| **Lisibilité** | Bonne pour les devs | Bonne pour tout le monde |
+| **Cas d'usage** | APIs, config, données complexes | Tableurs, données simples |
+| **Types de données** | Strings, nombres, booléens, null, listes, objets | Tout est du texte |
+| **Outils** | Éditeur de code, navigateur | Excel, Google Sheets |
+
+**En résumé** : utilise **JSON** quand tes données ont une structure imbriquée ou des types variés, et **CSV** quand tes données sont un simple tableau de lignes et colonnes.
