@@ -1,0 +1,164 @@
+---
+number: "02"
+title: "Lire & Modifier le DOM"
+subtitle: "Changer le contenu, les attributs et les propriétés des éléments."
+---
+
+## Lire et modifier le contenu
+
+Il existe trois propriétés principales pour accéder au contenu d'un élément. Chacune a un comportement différent qu'il faut bien comprendre.
+
+### `textContent`
+
+Récupère ou modifie le **texte brut** d'un élément et de tous ses descendants. Le HTML est ignoré.
+
+```js
+const title = document.querySelector("h1");
+
+// Lire le texte
+console.log(title.textContent); // "Bienvenue"
+
+// Modifier le texte
+title.textContent = "Nouveau titre";
+```
+
+Si tu passes du HTML dans <InlineCode>textContent</InlineCode>, il sera affiché **tel quel** comme du texte, pas interprété comme du HTML. C'est un avantage pour la sécurité.
+
+```js
+// Le HTML n'est PAS interprété
+title.textContent = "<em>Important</em>";
+// Affiche littéralement : <em>Important</em>
+```
+
+### `innerHTML`
+
+Récupère ou modifie le **contenu HTML** d'un élément. Le HTML est interprété par le navigateur.
+
+```js
+const container = document.querySelector(".container");
+
+// Lire le HTML interne
+console.log(container.innerHTML);
+
+// Modifier avec du HTML
+container.innerHTML = "<p>Nouveau <strong>contenu</strong></p>";
+```
+
+<Callout variant="warn" title="Danger XSS avec innerHTML">
+  N'utilise **jamais** <InlineCode>innerHTML</InlineCode> avec des données provenant de l'utilisateur. Un utilisateur malveillant pourrait injecter du code JavaScript (attaque XSS). Préfère <InlineCode>textContent</InlineCode> pour du texte, ou <InlineCode>createElement</InlineCode> pour construire du HTML de manière sécurisée.
+</Callout>
+
+```js
+// DANGEREUX - ne fais jamais ça avec des données utilisateur !
+const userInput = '<img src="x" onerror="alert(\'piraté !\')">';
+container.innerHTML = userInput; // Exécute du code malveillant
+
+// SÉCURISÉ - le HTML n'est pas interprété
+container.textContent = userInput; // Affiche le texte brut
+```
+
+### `value`
+
+Utilisé pour lire ou modifier la valeur des **champs de formulaire** (<InlineCode>input</InlineCode>, <InlineCode>textarea</InlineCode>, <InlineCode>select</InlineCode>).
+
+```js
+const input = document.querySelector('input[type="text"]');
+
+// Lire la valeur saisie
+console.log(input.value);
+
+// Modifier la valeur
+input.value = "Nouveau texte";
+
+// Vider le champ
+input.value = "";
+```
+
+### Comparaison
+
+| Propriété | Usage | Interprète le HTML ? |
+|---|---|---|
+| `textContent` | Texte brut | Non |
+| `innerHTML` | Contenu HTML | Oui |
+| `value` | Champs de formulaire | Non applicable |
+
+## Démo — Modifier en direct
+
+<TextContentDemo />
+
+## Les attributs HTML
+
+Les éléments HTML possèdent des **attributs** (`id`, `class`, `src`, `href`, `data-*`, etc.). JavaScript te permet de les lire, les modifier, les ajouter ou les supprimer.
+
+### Méthodes génériques
+
+```js
+const link = document.querySelector("a");
+
+// Lire un attribut
+const url = link.getAttribute("href");
+console.log(url); // "https://example.com"
+
+// Modifier un attribut
+link.setAttribute("href", "https://nouveau-lien.com");
+
+// Vérifier si un attribut existe
+if (link.hasAttribute("target")) {
+  console.log("L'attribut target est défini");
+}
+
+// Supprimer un attribut
+link.removeAttribute("target");
+```
+
+### Accès direct via les propriétés
+
+Pour les attributs standards, tu peux aussi y accéder directement comme des propriétés JavaScript de l'élément.
+
+```js
+const image = document.querySelector("img");
+
+// Lire
+console.log(image.src);
+console.log(image.alt);
+console.log(image.id);
+
+// Modifier
+image.src = "nouvelle-image.png";
+image.alt = "Description de la nouvelle image";
+image.id = "hero-image";
+```
+
+```js
+const input = document.querySelector("input");
+
+// Propriétés booléennes
+input.disabled = true;   // Désactive le champ
+input.required = true;   // Rend le champ obligatoire
+input.checked = false;   // Décoche une checkbox
+```
+
+### Les attributs `data-*`
+
+Les attributs personnalisés commençant par `data-` sont accessibles via la propriété <InlineCode>dataset</InlineCode>.
+
+```html
+<div id="user" data-user-id="42" data-role="admin">Alice</div>
+```
+
+```js
+const userDiv = document.querySelector("#user");
+
+// Lire les data attributes (camelCase)
+console.log(userDiv.dataset.userId); // "42"
+console.log(userDiv.dataset.role);   // "admin"
+
+// Modifier
+userDiv.dataset.role = "editor";
+
+// Ajouter un nouveau data attribute
+userDiv.dataset.status = "active";
+// Ajoute data-status="active" sur l'élément
+```
+
+Note que les noms avec des tirets sont convertis en **camelCase** : <InlineCode>data-user-id</InlineCode> devient <InlineCode>dataset.userId</InlineCode>.

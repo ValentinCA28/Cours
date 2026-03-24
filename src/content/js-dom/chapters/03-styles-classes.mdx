@@ -1,0 +1,151 @@
+---
+number: "03"
+title: "Styles & Classes CSS"
+subtitle: "Changer l'apparence des éléments via JavaScript."
+---
+
+## Modifier les styles inline
+
+Tu peux modifier directement le style d'un élément via sa propriété <InlineCode>style</InlineCode>. Chaque propriété CSS est accessible en **camelCase**.
+
+```js
+const box = document.querySelector(".box");
+
+// Modifier des styles
+box.style.backgroundColor = "tomato";
+box.style.color = "white";
+box.style.padding = "20px";
+box.style.borderRadius = "8px";
+box.style.fontSize = "18px";
+```
+
+La correspondance entre CSS et JavaScript suit une règle simple : les tirets disparaissent et la lettre suivante passe en majuscule.
+
+| CSS | JavaScript |
+|---|---|
+| `background-color` | `backgroundColor` |
+| `font-size` | `fontSize` |
+| `border-radius` | `borderRadius` |
+| `z-index` | `zIndex` |
+| `margin-top` | `marginTop` |
+
+Pour **supprimer** un style inline, assigne une chaîne vide :
+
+```js
+// Supprimer le background
+box.style.backgroundColor = "";
+```
+
+## Lire les styles calculés
+
+La propriété <InlineCode>style</InlineCode> ne donne accès qu'aux styles **inline** (définis directement sur l'élément). Pour lire le style **réellement appliqué** (incluant les feuilles de style CSS), utilise <InlineCode>getComputedStyle</InlineCode>.
+
+```js
+const box = document.querySelector(".box");
+
+// Lire le style calculé (ce qui est réellement affiché)
+const computedStyles = getComputedStyle(box);
+
+console.log(computedStyles.backgroundColor); // "rgb(255, 99, 71)"
+console.log(computedStyles.fontSize);        // "18px"
+console.log(computedStyles.display);         // "block"
+console.log(computedStyles.width);           // "350px"
+```
+
+<InlineCode>getComputedStyle</InlineCode> retourne les valeurs **calculées** par le navigateur, en unités résolues (px, rgb, etc.), même si tu as défini des valeurs en `%`, `em` ou `rem` dans ton CSS.
+
+## Manipuler les classes CSS <Badge>recommandé</Badge>
+
+Plutôt que de modifier les styles un par un, la bonne pratique est de **définir des classes CSS** dans ta feuille de style et de les ajouter/retirer en JavaScript. C'est plus propre, plus maintenable et plus performant.
+
+Chaque élément possède une propriété <InlineCode>classList</InlineCode> qui offre des méthodes pratiques.
+
+### `classList.add`
+
+Ajoute une ou plusieurs classes.
+
+```js
+const card = document.querySelector(".card");
+
+// Ajouter une classe
+card.classList.add("active");
+
+// Ajouter plusieurs classes d'un coup
+card.classList.add("visible", "highlighted");
+```
+
+### `classList.remove`
+
+Retire une ou plusieurs classes.
+
+```js
+// Retirer une classe
+card.classList.remove("active");
+
+// Retirer plusieurs classes
+card.classList.remove("visible", "highlighted");
+```
+
+### `classList.toggle`
+
+Ajoute la classe si elle est absente, la retire si elle est présente. Très utile pour les interactions (menus, accordéons, etc.).
+
+```js
+const menu = document.querySelector(".menu");
+
+// Basculer la classe "open"
+menu.classList.toggle("open");
+// Si "open" était présente -> elle est retirée (retourne false)
+// Si "open" était absente  -> elle est ajoutée (retourne true)
+```
+
+### `classList.contains`
+
+Vérifie si un élément possède une classe. Retourne <InlineCode>true</InlineCode> ou <InlineCode>false</InlineCode>.
+
+```js
+if (card.classList.contains("active")) {
+  console.log("La carte est active !");
+}
+```
+
+### `classList.replace`
+
+Remplace une classe par une autre.
+
+```js
+// Remplacer "hidden" par "visible"
+card.classList.replace("hidden", "visible");
+```
+
+### Exemple complet : bouton toggle
+
+```css
+/* styles.css */
+.menu {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.menu.open {
+  max-height: 500px;
+}
+```
+
+```js
+const button = document.querySelector("#menu-toggle");
+const menu = document.querySelector(".menu");
+
+button.addEventListener("click", function () {
+  menu.classList.toggle("open");
+});
+```
+
+## Démo — classList en action
+
+<StyleDemo />
+
+<Callout variant="info" title="classList plutôt que style">
+  Préfère toujours manipuler des **classes CSS** via <InlineCode>classList</InlineCode> plutôt que modifier les styles inline avec <InlineCode>style</InlineCode>. Les classes sont plus faciles à maintenir, permettent de séparer la logique (JS) de la présentation (CSS), et sont plus performantes car le navigateur peut optimiser les recalculs de style.
+</Callout>

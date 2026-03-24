@@ -1,0 +1,158 @@
+---
+number: "01"
+title: "Sélectionner des éléments"
+subtitle: "Cibler précisément un ou plusieurs éléments dans le DOM."
+---
+
+## Les méthodes de sélection
+
+Pour manipuler un élément du DOM, tu dois d'abord le **sélectionner**. JavaScript offre plusieurs méthodes pour cela, chacune avec ses particularités.
+
+### `getElementById`
+
+Sélectionne **un seul élément** par son attribut `id`. Retourne <InlineCode>null</InlineCode> si aucun élément ne correspond.
+
+```js
+// Sélectionner l'élément avec id="main-title"
+const title = document.getElementById("main-title");
+console.log(title);
+```
+
+### `getElementsByClassName`
+
+Sélectionne **tous les éléments** ayant une classe donnée. Retourne une <InlineCode>HTMLCollection</InlineCode> (collection vivante, pas un tableau).
+
+```js
+// Sélectionner tous les éléments avec la classe "card"
+const cards = document.getElementsByClassName("card");
+console.log(cards.length); // Nombre d'éléments trouvés
+```
+
+### `getElementsByTagName`
+
+Sélectionne **tous les éléments** d'un type de balise donné. Retourne aussi une <InlineCode>HTMLCollection</InlineCode>.
+
+```js
+// Sélectionner tous les paragraphes
+const paragraphs = document.getElementsByTagName("p");
+console.log(paragraphs.length);
+```
+
+### `querySelector` <Badge>recommandé</Badge>
+
+Sélectionne **le premier élément** correspondant à un sélecteur CSS. C'est la méthode la plus flexible et la plus utilisée.
+
+```js
+// Par id
+const title = document.querySelector("#main-title");
+
+// Par classe
+const firstCard = document.querySelector(".card");
+
+// Par sélecteur complexe
+const link = document.querySelector("nav a.active");
+
+// Par attribut
+const input = document.querySelector('input[type="email"]');
+```
+
+### `querySelectorAll` <Badge>recommandé</Badge>
+
+Sélectionne **tous les éléments** correspondant à un sélecteur CSS. Retourne une <InlineCode>NodeList</InlineCode> (itérable avec <InlineCode>forEach</InlineCode>).
+
+```js
+// Sélectionner toutes les cartes
+const cards = document.querySelectorAll(".card");
+
+// Parcourir les résultats
+cards.forEach(function (card) {
+  console.log(card.textContent);
+});
+```
+
+<Callout variant="success" title="Bonne pratique">
+  Privilégie <InlineCode>querySelector</InlineCode> et <InlineCode>querySelectorAll</InlineCode> dans ton code. Elles utilisent la syntaxe des sélecteurs CSS que tu connais déjà, sont plus lisibles, et couvrent tous les cas d'usage des autres méthodes.
+</Callout>
+
+## Démo interactive — Sélecteurs CSS
+
+Tape un sélecteur CSS et vois quels éléments sont mis en évidence :
+
+<SelectorDemo />
+
+## Comparaison rapide
+
+| Méthode | Retourne | Sélecteur CSS ? | Résultat |
+|---|---|---|---|
+| `getElementById` | Un élément | Non | Un seul |
+| `getElementsByClassName` | HTMLCollection | Non | Plusieurs |
+| `getElementsByTagName` | HTMLCollection | Non | Plusieurs |
+| `querySelector` | Un élément | Oui | Le premier |
+| `querySelectorAll` | NodeList | Oui | Tous |
+
+## Naviguer dans le DOM
+
+Une fois que tu as sélectionné un élément, tu peux **naviguer** vers ses voisins, ses enfants ou son parent grâce aux propriétés de traversée.
+
+### Accéder au parent
+
+```js
+const card = document.querySelector(".card");
+
+// Remonter au parent direct
+const parent = card.parentElement;
+console.log(parent);
+```
+
+### Accéder aux enfants
+
+```js
+const container = document.querySelector(".container");
+
+// Tous les enfants (éléments uniquement)
+console.log(container.children);
+
+// Premier enfant
+console.log(container.firstElementChild);
+
+// Dernier enfant
+console.log(container.lastElementChild);
+
+// Nombre d'enfants
+console.log(container.children.length);
+```
+
+### Accéder aux frères et soeurs (siblings)
+
+```js
+const item = document.querySelector(".current");
+
+// Élément suivant (frère)
+const next = item.nextElementSibling;
+
+// Élément précédent (frère)
+const previous = item.previousElementSibling;
+
+console.log(next);
+console.log(previous);
+```
+
+### Exemple complet de navigation
+
+```html
+<ul class="menu">
+  <li>Accueil</li>
+  <li class="active">Cours</li>
+  <li>Contact</li>
+</ul>
+```
+
+```js
+const active = document.querySelector(".active");
+
+console.log(active.parentElement);          // <ul class="menu">
+console.log(active.nextElementSibling);     // <li>Contact</li>
+console.log(active.previousElementSibling); // <li>Accueil</li>
+```
+
+Ces propriétés de navigation sont très utiles quand tu veux agir sur des éléments **proches** de celui que tu as déjà sélectionné, sans avoir besoin de refaire une requête avec <InlineCode>querySelector</InlineCode>.

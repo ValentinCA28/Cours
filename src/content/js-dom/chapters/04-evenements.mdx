@@ -1,0 +1,191 @@
+---
+number: "04"
+title: "Événements"
+subtitle: "Réagir aux actions de l'utilisateur : clics, frappes, survols..."
+---
+
+## Écouter un événement
+
+Pour réagir à une action de l'utilisateur, tu utilises <ic>addEventListener</ic>. Cette méthode prend **deux arguments** : le nom de l'événement (une chaîne) et une **fonction callback** qui sera exécutée quand l'événement se produit.
+
+```js
+const button = document.querySelector("#mon-bouton");
+
+button.addEventListener("click", function () {
+  // Ce code s'exécute quand on clique sur le bouton
+  alert("Tu as cliqué !");
+});
+```
+
+Tu peux écouter toutes sortes d'événements : <ic>click</ic>, <ic>dblclick</ic>, <ic>mouseover</ic>, <ic>mouseout</ic>, <ic>keydown</ic>, <ic>keyup</ic>, <ic>submit</ic>, <ic>input</ic>, <ic>change</ic>, <ic>scroll</ic>, <ic>load</ic>...
+
+## Retirer un écouteur
+
+Pour retirer un écouteur, tu dois utiliser <ic>removeEventListener</ic>. **Attention** : la fonction passée doit être **nommée** (une référence identique). Si tu passes une fonction anonyme, tu ne pourras jamais la retirer.
+
+```js
+// ✅ Bonne pratique : fonction nommée
+function handleClick() {
+  console.log("Clic !");
+}
+
+button.addEventListener("click", handleClick);
+
+// Plus tard, on retire l'écouteur
+button.removeEventListener("click", handleClick);
+```
+
+```js
+// ❌ Ne fonctionne PAS : deux fonctions anonymes différentes
+button.addEventListener("click", function () {
+  console.log("Clic !");
+});
+button.removeEventListener("click", function () {
+  console.log("Clic !");
+});
+// Les deux fonctions sont des objets différents en mémoire !
+```
+
+<Callout variant="info" title="Astuce : option once">
+  Si tu veux qu'un écouteur ne se déclenche **qu'une seule fois**, tu peux passer une option :
+  `button.addEventListener("click", handleClick, { once: true });`
+</Callout>
+
+## L'objet événement
+
+Quand un événement se déclenche, le navigateur passe automatiquement un **objet événement** à ta fonction callback. Il contient plein d'informations utiles.
+
+```js
+button.addEventListener("click", function (e) {
+  console.log(e.type);          // "click"
+  console.log(e.target);        // L'élément qui a déclenché l'événement
+  console.log(e.currentTarget); // L'élément sur lequel l'écouteur est attaché
+  console.log(e.clientX);       // Position X de la souris dans la fenêtre
+  console.log(e.clientY);       // Position Y de la souris dans la fenêtre
+});
+```
+
+### Propriétés les plus utilisées
+
+| Propriété | Description |
+|---|---|
+| <ic>e.target</ic> | L'élément **exact** qui a été cliqué (même un enfant) |
+| <ic>e.currentTarget</ic> | L'élément sur lequel l'écouteur est **attaché** |
+| <ic>e.type</ic> | Le type de l'événement (`"click"`, `"keydown"`, etc.) |
+| <ic>e.clientX</ic> / <ic>e.clientY</ic> | Position de la souris dans la fenêtre |
+| <ic>e.key</ic> | La touche pressée (`"Enter"`, `"a"`, `"Escape"`, etc.) |
+| <ic>e.code</ic> | Le code physique de la touche (`"KeyA"`, `"Space"`, etc.) |
+
+### Méthodes importantes
+
+**`preventDefault()`** — Empêche le comportement par défaut du navigateur. Par exemple, empêcher un formulaire de recharger la page :
+
+```js
+const form = document.querySelector("form");
+
+form.addEventListener("submit", function (e) {
+  e.preventDefault(); // Empêche le rechargement de la page
+  console.log("Formulaire soumis sans rechargement !");
+});
+```
+
+**`stopPropagation()`** — Empêche l'événement de remonter vers les éléments parents (on parle de *bubbling*) :
+
+```js
+const innerDiv = document.querySelector(".inner");
+
+innerDiv.addEventListener("click", function (e) {
+  e.stopPropagation(); // Le clic ne remontera pas au parent
+  console.log("Clic sur inner uniquement");
+});
+```
+
+## Événements clavier
+
+Pour les événements <ic>keydown</ic> et <ic>keyup</ic>, tu as accès aux propriétés <ic>e.key</ic> et <ic>e.code</ic> :
+
+```js
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    console.log("Tu as appuyé sur Entrée !");
+  }
+
+  if (e.key === "Escape") {
+    console.log("Tu as appuyé sur Échap !");
+  }
+
+  // Combinaison de touches
+  if (e.ctrlKey && e.key === "s") {
+    e.preventDefault(); // Empêche la sauvegarde du navigateur
+    console.log("Sauvegarde personnalisée !");
+  }
+});
+```
+
+## Démo — Journal des événements
+
+<EventLogDemo />
+
+## Délégation d'événements <Badge>pattern important</Badge>
+
+La **délégation d'événements** est un pattern essentiel. Au lieu d'attacher un écouteur sur **chaque** élément enfant, tu en mets **un seul** sur le parent et tu filtres avec <ic>e.target</ic>.
+
+**Pourquoi c'est important ?**
+- **Performance** : un seul écouteur au lieu de dizaines/centaines
+- **Éléments dynamiques** : les éléments ajoutés après coup sont automatiquement gérés
+- **Moins de code** : plus simple à maintenir
+
+```js
+// ❌ Sans délégation : un écouteur par bouton
+const buttons = document.querySelectorAll(".card button");
+buttons.forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    console.log("Clic sur un bouton");
+  });
+});
+
+// ✅ Avec délégation : un seul écouteur sur le parent
+const container = document.querySelector(".cards-container");
+
+container.addEventListener("click", function (e) {
+  // On vérifie si l'élément cliqué est un bouton
+  if (e.target.matches("button")) {
+    console.log("Clic sur le bouton :", e.target.textContent);
+  }
+
+  // On peut aussi cibler une classe
+  if (e.target.matches(".delete-btn")) {
+    const card = e.target.closest(".card"); // Trouve la carte parente
+    card.remove();
+  }
+});
+```
+
+<Callout variant="info" title="closest() et matches()">
+  La méthode <ic>matches(selector)</ic> vérifie si un élément correspond à un sélecteur CSS.
+  La méthode <ic>closest(selector)</ic> remonte dans les parents jusqu'à trouver un élément qui correspond au sélecteur. Ces deux méthodes sont indispensables pour la délégation d'événements.
+</Callout>
+
+Imagine une liste de tâches où l'utilisateur peut ajouter de nouveaux éléments. Avec la délégation, les **nouveaux éléments** seront automatiquement gérés sans avoir besoin de leur attacher un nouvel écouteur :
+
+```js
+const list = document.querySelector("#task-list");
+const input = document.querySelector("#new-task");
+
+// Ajout d'une tâche
+input.addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && input.value.trim() !== "") {
+    const li = document.createElement("li");
+    li.innerHTML = `${input.value} <button class="delete">✕</button>`;
+    list.appendChild(li);
+    input.value = "";
+  }
+});
+
+// Suppression par délégation — fonctionne même pour les tâches ajoutées après
+list.addEventListener("click", function (e) {
+  if (e.target.matches(".delete")) {
+    e.target.closest("li").remove();
+  }
+});
+```

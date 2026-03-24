@@ -1,0 +1,104 @@
+---
+number: "00"
+title: "Introduction au DOM"
+subtitle: "Comprendre ce qu'est le DOM et comment JavaScript s'y connecte."
+---
+
+## Qu'est-ce que le DOM ?
+
+Quand ton navigateur charge une page HTML, il ne travaille pas directement avec le texte brut du fichier `.html`. Il **construit une représentation en mémoire** de la page sous forme d'**arbre d'objets**. Cet arbre s'appelle le **DOM** (Document Object Model).
+
+Chaque balise HTML devient un **noeud** (node) dans cet arbre. Chaque noeud est un **objet JavaScript** avec des propriétés et des méthodes que tu peux manipuler.
+
+<Callout variant="info" title="Définition">
+  Le DOM est une **interface de programmation** (API) qui permet à JavaScript de lire, modifier, ajouter ou supprimer des éléments dans une page web. Ce n'est pas le HTML lui-même, mais une représentation vivante construite par le navigateur à partir du HTML.
+</Callout>
+
+## L'arbre du DOM
+
+Voici la structure typique d'un document HTML, représentée sous forme d'arbre :
+
+- `document` (racine)
+  - `html`
+    - `head`
+      - `meta`
+      - `title`
+      - `link`
+    - `body`
+      - `h1`
+      - `p`
+      - `div`
+        - `span`
+        - `a`
+
+Chaque élément est un **noeud enfant** de son conteneur. Par exemple, `head` et `body` sont les enfants directs de `html`. Ce lien parent-enfant est fondamental : c'est grâce à lui que tu peux **naviguer** dans le DOM.
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Ma page</title>
+  </head>
+  <body>
+    <h1>Bonjour !</h1>
+    <p>Bienvenue sur ma page.</p>
+  </body>
+</html>
+```
+
+Ce HTML produit un arbre où `document` contient `html`, qui contient `head` et `body`, et ainsi de suite.
+
+## L'objet `document`
+
+Le point d'entrée principal pour manipuler le DOM est l'objet global <InlineCode>document</InlineCode>. Il représente toute la page et te donne accès à ses propriétés et méthodes.
+
+```js
+// Afficher le titre de la page
+console.log(document.title);
+
+// Afficher l'URL courante
+console.log(document.URL);
+
+// Accéder au <body>
+console.log(document.body);
+
+// Accéder au <head>
+console.log(document.head);
+
+// Voir tout le HTML de la page
+console.log(document.documentElement);
+```
+
+Tu peux tester ces lignes directement dans la **console** de ton navigateur (F12 > Console). C'est le meilleur moyen de découvrir le DOM de manière interactive.
+
+## Quand le DOM est-il prêt ?
+
+Le navigateur lit le HTML de haut en bas. Si ton script JavaScript s'exécute **avant** que le navigateur ait fini de construire le DOM, tu risques de cibler des éléments qui n'existent pas encore.
+
+<Callout variant="warn" title="Attention au placement du script">
+  Place toujours tes balises <InlineCode>&lt;script&gt;</InlineCode> juste avant la fermeture <InlineCode>&lt;/body&gt;</InlineCode>, ou utilise l'événement <InlineCode>DOMContentLoaded</InlineCode> pour t'assurer que le DOM est entièrement construit avant d'exécuter ton code.
+</Callout>
+
+### Méthode 1 : placer le script en bas du body
+
+```html
+<body>
+  <h1>Ma page</h1>
+  <p>Du contenu...</p>
+
+  <!-- Le script est placé après tout le contenu -->
+  <script src="app.js"></script>
+</body>
+```
+
+### Méthode 2 : utiliser `DOMContentLoaded`
+
+```js
+document.addEventListener("DOMContentLoaded", function () {
+  // Ce code s'exécute uniquement quand le DOM est prêt
+  const title = document.querySelector("h1");
+  console.log(title.textContent); // "Ma page"
+});
+```
+
+L'événement <InlineCode>DOMContentLoaded</InlineCode> se déclenche dès que le HTML est analysé et le DOM construit, **sans attendre** le chargement des images ou des feuilles de style. C'est la solution la plus fiable pour s'assurer que tout est en place avant de manipuler la page.

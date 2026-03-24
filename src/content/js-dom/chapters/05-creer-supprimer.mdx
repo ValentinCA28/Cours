@@ -1,0 +1,230 @@
+---
+number: "05"
+title: "Créer & Supprimer des éléments"
+subtitle: "Construire dynamiquement des éléments HTML depuis JavaScript."
+---
+
+## Créer un élément
+
+La création d'un élément dans le DOM se fait en **trois étapes** :
+
+1. **Créer** l'élément avec <ic>document.createElement()</ic>
+2. **Configurer** l'élément (texte, classes, attributs...)
+3. **Insérer** l'élément dans le DOM
+
+```js
+// 1. Créer
+const card = document.createElement("div");
+
+// 2. Configurer
+card.textContent = "Ma nouvelle carte";
+card.classList.add("card", "card--highlighted");
+card.setAttribute("data-id", "42");
+
+// 3. Insérer dans le DOM
+document.querySelector(".container").appendChild(card);
+```
+
+<Callout variant="info" title="createElement ne fait rien tout seul">
+  Un élément créé avec `createElement` existe en mémoire mais n'est **pas visible** sur la page tant que tu ne l'as pas inséré dans le DOM avec une méthode d'insertion.
+</Callout>
+
+## Configurer un élément
+
+Avant d'insérer ton élément, tu peux le configurer comme n'importe quel élément du DOM :
+
+```js
+const article = document.createElement("article");
+
+// Texte
+article.textContent = "Contenu texte brut";
+article.innerHTML = "<h3>Titre</h3><p>Avec du HTML à l'intérieur</p>";
+
+// Classes
+article.classList.add("post", "post--featured");
+article.classList.remove("post--featured");
+
+// Attributs
+article.setAttribute("id", "post-1");
+article.setAttribute("data-category", "tech");
+
+// Styles en ligne (à éviter si possible)
+article.style.marginTop = "1rem";
+```
+
+<Callout variant="warn" title="innerHTML vs textContent">
+  Utilise <ic>textContent</ic> quand tu insères du texte simple : c'est plus sûr car le contenu ne sera pas interprété comme du HTML. Utilise <ic>innerHTML</ic> uniquement quand tu as besoin de structurer du HTML, et **jamais** avec des données venant de l'utilisateur (risque d'injection XSS).
+</Callout>
+
+## Méthodes d'insertion
+
+Il existe plusieurs façons d'insérer un élément dans le DOM. Chacune a son utilité selon **où** tu veux placer le nouvel élément.
+
+### appendChild — à la fin
+
+Ajoute l'élément comme **dernier enfant** du parent :
+
+```js
+const list = document.querySelector("ul");
+const newItem = document.createElement("li");
+newItem.textContent = "Nouvel élément";
+
+list.appendChild(newItem); // Ajouté à la fin de la liste
+```
+
+### prepend — au début
+
+Ajoute l'élément comme **premier enfant** du parent :
+
+```js
+list.prepend(newItem); // Ajouté au début de la liste
+```
+
+### insertBefore — avant un élément précis
+
+Insère l'élément **avant** un enfant existant du parent :
+
+```js
+const referenceItem = list.querySelector("li:nth-child(2)");
+list.insertBefore(newItem, referenceItem); // Inséré avant le 2ᵉ élément
+```
+
+### insertAdjacentElement — positionnement flexible
+
+Cette méthode est très pratique car elle te donne **quatre positions** possibles :
+
+```js
+const target = document.querySelector(".target");
+const newEl = document.createElement("div");
+newEl.textContent = "Nouveau";
+
+// "beforebegin" — juste AVANT l'élément cible (frère précédent)
+target.insertAdjacentElement("beforebegin", newEl);
+
+// "afterbegin"  — comme PREMIER enfant de la cible
+target.insertAdjacentElement("afterbegin", newEl);
+
+// "beforeend"   — comme DERNIER enfant de la cible (= appendChild)
+target.insertAdjacentElement("beforeend", newEl);
+
+// "afterend"    — juste APRÈS l'élément cible (frère suivant)
+target.insertAdjacentElement("afterend", newEl);
+```
+
+```
+<!-- beforebegin -->
+<div class="target">
+  <!-- afterbegin -->
+  contenu existant
+  <!-- beforeend -->
+</div>
+<!-- afterend -->
+```
+
+## Supprimer un élément
+
+### el.remove()
+
+La manière la plus simple et moderne de supprimer un élément :
+
+```js
+const card = document.querySelector(".card");
+card.remove(); // L'élément est supprimé du DOM
+```
+
+### parentElement.removeChild()
+
+L'ancienne méthode, que tu peux encore rencontrer dans du code existant :
+
+```js
+const list = document.querySelector("ul");
+const firstItem = list.querySelector("li:first-child");
+
+list.removeChild(firstItem); // Supprime le premier élément de la liste
+```
+
+### Vider un conteneur avec innerHTML
+
+Pour supprimer **tous** les enfants d'un conteneur d'un coup :
+
+```js
+const container = document.querySelector(".container");
+container.innerHTML = ""; // Supprime tout le contenu HTML
+```
+
+<Callout variant="warn" title="innerHTML = '' supprime les écouteurs">
+  Quand tu vides un conteneur avec `innerHTML = ""`, tous les écouteurs d'événements attachés aux éléments enfants sont **perdus**. Si tu as besoin de conserver certains éléments, supprime-les individuellement avec `remove()`.
+</Callout>
+
+## Cloner un élément
+
+La méthode <ic>cloneNode()</ic> permet de **dupliquer** un élément existant. C'est utile quand tu veux créer plusieurs éléments similaires à partir d'un modèle (template).
+
+```js
+const original = document.querySelector(".card-template");
+
+// cloneNode(true)  → copie l'élément ET tous ses enfants
+// cloneNode(false) → copie l'élément SANS ses enfants
+const clone = original.cloneNode(true);
+
+// Tu peux modifier le clone avant de l'insérer
+clone.querySelector(".card-title").textContent = "Nouvelle carte";
+clone.classList.remove("card-template");
+
+document.querySelector(".cards-container").appendChild(clone);
+```
+
+<Callout variant="info" title="true vs false">
+  Passe **true** à `cloneNode()` pour une copie **profonde** (l'élément + tous ses descendants). Avec **false**, tu n'obtiens que l'élément lui-même, sans ses enfants.
+</Callout>
+
+## Démo — Todo List dynamique
+
+<TodoDemo />
+
+## Exemple complet : liste dynamique
+
+Voici un exemple qui combine création, insertion et suppression :
+
+```js
+const form = document.querySelector("#add-form");
+const input = document.querySelector("#item-input");
+const list = document.querySelector("#items-list");
+
+// Ajout d'un élément
+form.addEventListener("submit", function (e) {
+  e.preventDefault();
+
+  const text = input.value.trim();
+  if (text === "") return;
+
+  // Créer l'élément
+  const li = document.createElement("li");
+  li.classList.add("item");
+
+  const span = document.createElement("span");
+  span.textContent = text;
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.textContent = "Supprimer";
+  deleteBtn.classList.add("delete-btn");
+
+  // Assembler
+  li.appendChild(span);
+  li.appendChild(deleteBtn);
+
+  // Insérer dans la liste
+  list.appendChild(li);
+
+  // Réinitialiser le champ
+  input.value = "";
+  input.focus();
+});
+
+// Suppression par délégation
+list.addEventListener("click", function (e) {
+  if (e.target.matches(".delete-btn")) {
+    e.target.closest(".item").remove();
+  }
+});
+```
