@@ -229,7 +229,21 @@ ${htmlSetup}
           <span className="text-xs text-muted font-mono uppercase tracking-wider block mb-2">
             Solution
           </span>
-          <pre className="whitespace-pre-wrap font-mono text-[13px] text-green/80 m-0">{normalizedSolution}</pre>
+          {normalizedSolution ? (
+            <pre
+              className="whitespace-pre-wrap font-mono text-[13px] text-green m-0 p-0 bg-transparent border-0"
+              dangerouslySetInnerHTML={{
+                __html: normalizedSolution
+                  .replace(/&/g, "&amp;")
+                  .replace(/</g, "&lt;")
+                  .replace(/>/g, "&gt;"),
+              }}
+            />
+          ) : (
+            <p className="text-muted text-sm italic">
+              Prop solution reçue : &quot;{String(solution)}&quot; (type: {typeof solution})
+            </p>
+          )}
         </div>
       )}
     </div>
