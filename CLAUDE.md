@@ -27,8 +27,9 @@ src/
     ProgressBar.tsx         # Barre de progression (pas utilisée, TopBar a sa propre)
     mdx-components.tsx      # Composants MDX : Callout, InlineCode, DemoBlock, Badge + demos
     demos/
-      CodeExercise.tsx      # Éditeur de code + iframe sandboxé + validation + preview DOM
-      ExerciseById.tsx      # Wrapper qui charge un exercice par ID depuis exercises.ts
+      CodeExercise.tsx      # Éditeur de code JS + iframe sandboxé + validation + preview DOM
+      PythonExercise.tsx    # Éditeur de code Python + Pyodide (WebAssembly) + validation
+      ExerciseById.tsx      # Wrapper générique : route vers CodeExercise ou PythonExercise selon language
       SelectorDemo.tsx      # Démo sélecteurs CSS interactifs
       TextContentDemo.tsx   # Démo textContent vs innerHTML
       StyleDemo.tsx         # Démo manipulation de styles
@@ -47,11 +48,13 @@ src/
 ```
 
 ## Cours existants
-- **js-dom** — JS DOM Manipulation (8 chapitres, 6 démos interactives, 22 exercices)
+- **js-dom** — JS DOM Manipulation (8 chapitres, 6 démos interactives, 22 exercices JS)
+- **python-server-side-rendering** — Python SSR avec Flask/Jinja2 (8 chapitres, 18 exercices Python exécutables via Pyodide)
 
 ## Branches
 - `main` — branche de développement, auto-deploy Vercel
-- `v1-stable` — backup V1 stable (2026-03-24)
+- `v1-stable` — JS DOM uniquement (2026-03-24)
+- `v2-python-implemented` — JS DOM + Python SSR + Pyodide (2026-03-24)
 
 ---
 
@@ -136,3 +139,8 @@ Fonts : Syne (sans, titres) + JetBrains Mono (mono, code)
 - CodeExercise : iframe `sandbox="allow-scripts"`, srcdoc + postMessage
 - Preview DOM : mini-iframe visible avec CSS pour `.active`, `.visible`, `.selected`, `.open`, `.hidden`, `.highlighted`, etc.
 - Exercices fetch : besoin de `allow-scripts` dans le sandbox (pas de same-origin)
+- PythonExercise : Pyodide v0.27.7 chargé lazy depuis CDN, singleton partagé entre exercices
+- Pyodide supporte sqlite3, json, csv, re, io, urllib.parse — pas besoin d'install
+- Les exercices Python ont `language: "python"` dans exercises.ts → ExerciseById route auto
+- Pour ajouter un cours avec un nouveau langage : créer un composant XxxExercise + router dans ExerciseById
+- Les `{{ }}` Jinja2 dans le MDX doivent être échappés : `{"{{ variable }}"}` en dehors des code blocks
