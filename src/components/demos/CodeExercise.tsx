@@ -27,7 +27,6 @@ interface IframeResult {
 }
 
 export default function CodeExercise(props: CodeExerciseProps) {
-  // Resolve exercise data: from exerciseData prop (passed by wrapper) or direct props
   const data = props.exerciseData || {
     instruction: props.instruction || "",
     starterCode: props.starterCode || "",
@@ -43,6 +42,7 @@ export default function CodeExercise(props: CodeExerciseProps) {
   const [result, setResult] = useState<IframeResult | null>(null);
   const [status, setStatus] = useState<"idle" | "success" | "fail">("idle");
   const [showSolution, setShowSolution] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -51,12 +51,18 @@ export default function CodeExercise(props: CodeExerciseProps) {
         const d = event.data as IframeResult & { __codeExercise: true };
         setResult({ logs: d.logs, dom: d.dom, error: d.error });
 
+        // For DOM exercises, build preview HTML
+        if (validate === "dom" && !d.error) {
+          setPreviewHtml(d.dom);
+        }
+
         if (expectedOutput) {
           const actual =
             validate === "console" ? d.logs.join("\n") : d.dom.trim();
           setStatus(actual.trim() === expectedOutput.trim() ? "success" : "fail");
-        } else {
-          setStatus("idle");
+        } else if (!d.error) {
+          // For DOM exercises without expectedOutput, show success if no error
+          setStatus(validate === "dom" ? "success" : "idle");
         }
       }
     }
@@ -68,6 +74,7 @@ export default function CodeExercise(props: CodeExerciseProps) {
   const handleRun = useCallback(() => {
     setResult(null);
     setStatus("idle");
+    setPreviewHtml(null);
 
     const srcdoc = `<!DOCTYPE html>
 <html>
@@ -110,7 +117,6 @@ ${htmlSetup}
   }
 
   function __sendResults() {
-    // Strip <script> tags from DOM output
     var __dom = document.body.innerHTML.replace(/<script[\\s\\S]*?<\\/script>/gi, '').trim();
     parent.postMessage({
       __codeExercise: true,
@@ -141,13 +147,8 @@ ${htmlSetup}
     setCode(starterCode);
     setResult(null);
     setStatus("idle");
+    setPreviewHtml(null);
   }, [starterCode]);
-
-  const displayOutput = result
-    ? validate === "console"
-      ? result.logs.join("\n")
-      : result.dom.trim()
-    : null;
 
   return (
     <div className="bg-surface border border-border rounded-xl p-5 my-6">
@@ -186,6 +187,7 @@ ${htmlSetup}
         </button>
       </div>
 
+      {/* Hidden iframe for code execution */}
       <iframe
         ref={iframeRef}
         sandbox="allow-scripts"
@@ -193,31 +195,86 @@ ${htmlSetup}
         title="code-exercise-sandbox"
       />
 
+      {/* Results */}
       {result && (
-        <div className="bg-code-bg rounded-lg p-3 font-mono text-[13px] mt-3">
+        <div className="mt-3 space-y-3">
           {result.error ? (
-            <p className="text-pink">❌ Erreur : {result.error}</p>
+            <div className="bg-code-bg rounded-lg p-3 font-mono text-[13px]">
+              <p className="text-pink">❌ Erreur : {result.error}</p>
+            </div>
           ) : (
             <>
-              {displayOutput && (
-                <pre className="whitespace-pre-wrap text-text m-0">
-                  {displayOutput}
-                </pre>
+              {/* Console output */}
+              {validate === "console" && result.logs.length > 0 && (
+                <div className="bg-code-bg rounded-lg p-3 font-mono text-[13px]">
+                  <span className="text-xs text-muted uppercase tracking-wider block mb-2">
+                    Console
+                  </span>
+                  {result.logs.map((log, i) => (
+                    <div key={i} className="text-text">
+                      <span className="text-muted mr-2">›</span>
+                      {log}
+                    </div>
+                  ))}
+                </div>
               )}
+
+              {/* DOM visual preview */}
+              {validate === "dom" && previewHtml && (
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-surface2 border-b border-border">
+                    <div className="flex gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-pink/60" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-yellow/60" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-green/60" />
+                    </div>
+                    <span className="text-[10px] text-muted font-mono uppercase tracking-wider">
+                      Résultat DOM
+                    </span>
+                  </div>
+                  <iframe
+                    srcDoc={`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: sans-serif; font-size: 14px; color: #e2e8f0; background: #0d0f17; padding: 12px; margin: 0; }
+  * { box-sizing: border-box; }
+  div, p, span, li, h1, h2, h3, h4, h5, h6 { margin: 4px 0; }
+  ul, ol { padding-left: 20px; }
+  .card, .box, .container { border: 1px dashed #252a3d; border-radius: 6px; padding: 8px; margin: 4px 0; }
+</style>
+</head>
+<body>${previewHtml}</body>
+</html>`}
+                    sandbox=""
+                    className="w-full bg-bg"
+                    style={{ height: 120, border: "none" }}
+                    title="dom-preview"
+                  />
+                </div>
+              )}
+
+              {/* Validation status */}
               {status === "success" && (
-                <p className="text-green mt-2">✅ Correct !</p>
+                <div className="bg-green/10 border border-green/20 rounded-lg px-3 py-2">
+                  <p className="text-green text-sm font-medium">✅ Correct !</p>
+                </div>
               )}
               {status === "fail" && (
-                <p className="text-pink mt-2">
-                  ❌ Pas tout à fait... Résultat attendu :{" "}
-                  <code className="text-muted">{expectedOutput}</code>
-                </p>
+                <div className="bg-pink/10 border border-pink/20 rounded-lg px-3 py-2">
+                  <p className="text-pink text-sm">
+                    ❌ Pas tout à fait... Résultat attendu :{" "}
+                    <code className="text-muted">{expectedOutput}</code>
+                  </p>
+                </div>
               )}
             </>
           )}
         </div>
       )}
 
+      {/* Solution */}
       {showSolution && (
         <div className="bg-code-bg border border-border rounded-lg p-4 mt-3">
           <span className="text-xs text-muted font-mono uppercase tracking-wider block mb-2">
