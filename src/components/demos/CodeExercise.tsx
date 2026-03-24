@@ -25,7 +25,7 @@ export default function CodeExercise({
   htmlSetup = "",
   validate = "console",
 }: CodeExerciseProps) {
-  const [code, setCode] = useState(starterCode);
+  const [code, setCode] = useState((starterCode || "").replace(/\\n/g, "\n"));
   const [result, setResult] = useState<IframeResult | null>(null);
   const [status, setStatus] = useState<"idle" | "success" | "fail">("idle");
   const [showSolution, setShowSolution] = useState(false);
@@ -99,7 +99,7 @@ ${htmlSetup}
   }, [code, htmlSetup]);
 
   const handleReset = useCallback(() => {
-    setCode(starterCode);
+    setCode((starterCode || "").replace(/\\n/g, "\n"));
     setResult(null);
     setStatus("idle");
   }, [starterCode]);
@@ -191,8 +191,8 @@ ${htmlSetup}
           <span className="text-xs text-muted font-mono uppercase tracking-wider block mb-2">
             Solution
           </span>
-          <pre className="whitespace-pre-wrap font-mono text-[13px] text-text m-0">
-            {solution}
+          <pre className="whitespace-pre-wrap font-mono text-[13px] text-green/80 m-0">
+            {(solution || "").replace(/\\n/g, "\n")}
           </pre>
         </div>
       )}
