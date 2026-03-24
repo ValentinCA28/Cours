@@ -56,6 +56,15 @@ const link = document.querySelector("nav a.active");
 const input = document.querySelector('input[type="email"]');
 ```
 
+<CodeExercise
+  instruction="Sélectionne le paragraphe avec la classe 'important' et affiche son contenu texte."
+  starterCode={`const el = document._____(".important");\nconsole.log(el.textContent);`}
+  solution={`const el = document.querySelector(".important");\nconsole.log(el.textContent);`}
+  htmlSetup={`<p>Normal</p><p class="important">Ce texte est important !</p>`}
+  expectedOutput="Ce texte est important !"
+  validate="console"
+/>
+
 ### `querySelectorAll` <Badge>recommandé</Badge>
 
 Sélectionne **tous les éléments** correspondant à un sélecteur CSS. Retourne une <InlineCode>NodeList</InlineCode> (itérable avec <InlineCode>forEach</InlineCode>).
@@ -69,6 +78,15 @@ cards.forEach(function (card) {
   console.log(card.textContent);
 });
 ```
+
+<CodeExercise
+  instruction="Sélectionne tous les éléments <li> et affiche leur nombre avec console.log."
+  starterCode={`const items = document._____("li");\nconsole.log(items.length);`}
+  solution={`const items = document.querySelectorAll("li");\nconsole.log(items.length);`}
+  htmlSetup={`<ul><li>A</li><li>B</li><li>C</li><li>D</li></ul>`}
+  expectedOutput="4"
+  validate="console"
+/>
 
 <Callout variant="success" title="Bonne pratique">
   Privilégie <InlineCode>querySelector</InlineCode> et <InlineCode>querySelectorAll</InlineCode> dans ton code. Elles utilisent la syntaxe des sélecteurs CSS que tu connais déjà, sont plus lisibles, et couvrent tous les cas d'usage des autres méthodes.
@@ -136,6 +154,15 @@ const previous = item.previousElementSibling;
 console.log(next);
 console.log(previous);
 ```
+
+<CodeExercise
+  instruction="Sélectionne l'élément avec la classe 'current', puis affiche le texte de son frère suivant."
+  starterCode={`const el = document.querySelector(".current");\nconst next = el._____;\nconsole.log(next.textContent);`}
+  solution={`const el = document.querySelector(".current");\nconst next = el.nextElementSibling;\nconsole.log(next.textContent);`}
+  htmlSetup={`<ul><li>Premier</li><li class="current">Actuel</li><li>Suivant</li></ul>`}
+  expectedOutput="Suivant"
+  validate="console"
+/>
 
 ### Exemple complet de navigation
 

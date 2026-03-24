@@ -7,6 +7,7 @@ import {
   EventLogDemo,
   TodoDemo,
   FetchDemo,
+  CodeExercise,
 } from "@/components/demos";
 
 /* ── Callout ─────────────────────────────────────────────── */
@@ -128,4 +129,5 @@ export const components: MDXComponents = {
   EventLogDemo,
   TodoDemo,
   FetchDemo,
+  CodeExercise,
 };

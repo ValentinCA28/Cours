@@ -59,7 +59,7 @@ export default function Sidebar({ courseMeta, currentChapter }: SidebarProps) {
       {/* Mobile hamburger button */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed top-4 left-4 z-50 flex items-center justify-center w-10 h-10 rounded-lg bg-surface border border-border text-muted hover:text-text transition-colors lg:hidden"
+        className="fixed top-[62px] left-4 z-40 flex items-center justify-center w-10 h-10 rounded-lg bg-surface border border-border text-muted hover:text-text transition-colors lg:hidden"
         aria-label="Open menu"
       >
         <svg
@@ -86,7 +86,7 @@ export default function Sidebar({ courseMeta, currentChapter }: SidebarProps) {
       {/* Mobile sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full w-[260px] bg-surface border-r border-border
+          fixed top-[52px] left-0 z-40 h-[calc(100vh-52px)] w-[260px] bg-surface border-r border-border
           transform transition-transform duration-200 ease-out
           lg:hidden
           ${open ? "translate-x-0" : "-translate-x-full"}
@@ -114,7 +114,7 @@ export default function Sidebar({ courseMeta, currentChapter }: SidebarProps) {
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:block sticky top-0 h-screen w-[260px] shrink-0 bg-surface border-r border-border">
+      <aside className="hidden lg:block sticky top-0 h-[calc(100vh-52px)] w-[260px] shrink-0 bg-surface border-r border-border">
         {nav}
       </aside>
     </>

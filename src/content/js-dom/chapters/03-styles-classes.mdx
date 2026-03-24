@@ -36,6 +36,14 @@ Pour **supprimer** un style inline, assigne une chaîne vide :
 box.style.backgroundColor = "";
 ```
 
+<CodeExercise
+  instruction="Change la couleur de fond de la boîte en 'tomato' et sa taille de police en '20px'."
+  starterCode={`const box = document.querySelector(".box");\nbox.style._____ = "tomato";\nbox.style._____ = "20px";`}
+  solution={`const box = document.querySelector(".box");\nbox.style.backgroundColor = "tomato";\nbox.style.fontSize = "20px";`}
+  htmlSetup={`<div class="box" style="padding:10px;">Ma boîte</div>`}
+  validate="dom"
+/>
+
 ## Lire les styles calculés
 
 La propriété <InlineCode>style</InlineCode> ne donne accès qu'aux styles **inline** (définis directement sur l'élément). Pour lire le style **réellement appliqué** (incluant les feuilles de style CSS), utilise <InlineCode>getComputedStyle</InlineCode>.
@@ -99,6 +107,15 @@ menu.classList.toggle("open");
 // Si "open" était absente  -> elle est ajoutée (retourne true)
 ```
 
+<CodeExercise
+  instruction="Bascule (toggle) la classe 'visible' sur l'élément .menu et affiche si elle est maintenant présente."
+  starterCode={`const menu = document.querySelector(".menu");\nconst result = menu.classList._____("visible");\nconsole.log(result);`}
+  solution={`const menu = document.querySelector(".menu");\nconst result = menu.classList.toggle("visible");\nconsole.log(result);`}
+  htmlSetup={`<nav class="menu">Navigation</nav>`}
+  expectedOutput="true"
+  validate="console"
+/>
+
 ### `classList.contains`
 
 Vérifie si un élément possède une classe. Retourne <InlineCode>true</InlineCode> ou <InlineCode>false</InlineCode>.
@@ -141,6 +158,15 @@ button.addEventListener("click", function () {
   menu.classList.toggle("open");
 });
 ```
+
+<CodeExercise
+  instruction="Ajoute la classe 'active' à la carte, puis remplace-la par 'selected'."
+  starterCode={`const card = document.querySelector(".card");\ncard.classList._____("active");\ncard.classList._____("active", "selected");\nconsole.log(card.className);`}
+  solution={`const card = document.querySelector(".card");\ncard.classList.add("active");\ncard.classList.replace("active", "selected");\nconsole.log(card.className);`}
+  htmlSetup={`<div class="card">Ma carte</div>`}
+  expectedOutput="card selected"
+  validate="console"
+/>
 
 ## Démo — classList en action
 

@@ -29,6 +29,14 @@ document.querySelector(".container").appendChild(card);
   Un élément créé avec `createElement` existe en mémoire mais n'est **pas visible** sur la page tant que tu ne l'as pas inséré dans le DOM avec une méthode d'insertion.
 </Callout>
 
+<CodeExercise
+  instruction={`Crée un élément <p>, donne-lui le texte 'Nouveau paragraphe' et ajoute-le dans le conteneur.`}
+  starterCode={`const p = document._____("p");\np.textContent = "_____";\ndocument.querySelector(".container")._____(p);`}
+  solution={`const p = document.createElement("p");\np.textContent = "Nouveau paragraphe";\ndocument.querySelector(".container").appendChild(p);`}
+  htmlSetup={`<div class="container"><p>Existant</p></div>`}
+  validate="dom"
+/>
+
 ## Configurer un élément
 
 Avant d'insérer ton élément, tu peux le configurer comme n'importe quel élément du DOM :
@@ -121,6 +129,14 @@ target.insertAdjacentElement("afterend", newEl);
 <!-- afterend -->
 ```
 
+<CodeExercise
+  instruction={`Crée un <li> avec le texte 'Premier !' et insère-le au début de la liste avec prepend.`}
+  starterCode={`const li = document.createElement("li");\nli.textContent = "Premier !";\nconst list = document.querySelector("ul");\nlist._____(li);`}
+  solution={`const li = document.createElement("li");\nli.textContent = "Premier !";\nconst list = document.querySelector("ul");\nlist.prepend(li);`}
+  htmlSetup={`<ul><li>A</li><li>B</li><li>C</li></ul>`}
+  validate="dom"
+/>
+
 ## Supprimer un élément
 
 ### el.remove()
@@ -156,6 +172,14 @@ container.innerHTML = ""; // Supprime tout le contenu HTML
   Quand tu vides un conteneur avec `innerHTML = ""`, tous les écouteurs d'événements attachés aux éléments enfants sont **perdus**. Si tu as besoin de conserver certains éléments, supprime-les individuellement avec `remove()`.
 </Callout>
 
+<CodeExercise
+  instruction={`Supprime l'élément avec la classe 'a-supprimer' du DOM.`}
+  starterCode={`const el = document.querySelector(".a-supprimer");\nel._____();`}
+  solution={`const el = document.querySelector(".a-supprimer");\nel.remove();`}
+  htmlSetup={`<div><p>Garde-moi</p><p class="a-supprimer">Supprime-moi !</p><p>Garde-moi aussi</p></div>`}
+  validate="dom"
+/>
+
 ## Cloner un élément
 
 La méthode <ic>cloneNode()</ic> permet de **dupliquer** un élément existant. C'est utile quand tu veux créer plusieurs éléments similaires à partir d'un modèle (template).
@@ -177,6 +201,14 @@ document.querySelector(".cards-container").appendChild(clone);
 <Callout variant="info" title="true vs false">
   Passe **true** à `cloneNode()` pour une copie **profonde** (l'élément + tous ses descendants). Avec **false**, tu n'obtiens que l'élément lui-même, sans ses enfants.
 </Callout>
+
+<CodeExercise
+  instruction={`Clone la carte (deep clone) et ajoute la copie dans le conteneur.`}
+  starterCode={`const card = document.querySelector(".card");\nconst copy = card._____(_____);\ndocument.querySelector(".container").appendChild(copy);`}
+  solution={`const card = document.querySelector(".card");\nconst copy = card.cloneNode(true);\ndocument.querySelector(".container").appendChild(copy);`}
+  htmlSetup={`<div class="container"><div class="card"><h3>Titre</h3><p>Contenu</p></div></div>`}
+  validate="dom"
+/>
 
 ## Démo — Todo List dynamique
 

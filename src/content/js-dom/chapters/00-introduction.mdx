@@ -71,6 +71,14 @@ console.log(document.documentElement);
 
 Tu peux tester ces lignes directement dans la **console** de ton navigateur (F12 > Console). C'est le meilleur moyen de découvrir le DOM de manière interactive.
 
+<CodeExercise
+  instruction="Utilise l'objet document pour afficher le titre de la page avec console.log."
+  starterCode={`// Affiche le titre de la page\nconsole.log(document.____);`}
+  solution={`console.log(document.title);`}
+  htmlSetup={`<title>Ma Super Page</title>`}
+  validate="console"
+/>
+
 ## Quand le DOM est-il prêt ?
 
 Le navigateur lit le HTML de haut en bas. Si ton script JavaScript s'exécute **avant** que le navigateur ait fini de construire le DOM, tu risques de cibler des éléments qui n'existent pas encore.
@@ -100,5 +108,13 @@ document.addEventListener("DOMContentLoaded", function () {
   console.log(title.textContent); // "Ma page"
 });
 ```
+
+<CodeExercise
+  instruction="Écris un écouteur DOMContentLoaded qui affiche 'DOM prêt !' dans la console."
+  starterCode={`document.addEventListener("_____", function () {\n  console.log("_____");\n});`}
+  solution={`document.addEventListener("DOMContentLoaded", function () {\n  console.log("DOM prêt !");\n});`}
+  expectedOutput="DOM prêt !"
+  validate="console"
+/>
 
 L'événement <InlineCode>DOMContentLoaded</InlineCode> se déclenche dès que le HTML est analysé et le DOM construit, **sans attendre** le chargement des images ou des feuilles de style. C'est la solution la plus fiable pour s'assurer que tout est en place avant de manipuler la page.

@@ -19,6 +19,15 @@ button.addEventListener("click", function () {
 
 Tu peux écouter toutes sortes d'événements : <ic>click</ic>, <ic>dblclick</ic>, <ic>mouseover</ic>, <ic>mouseout</ic>, <ic>keydown</ic>, <ic>keyup</ic>, <ic>submit</ic>, <ic>input</ic>, <ic>change</ic>, <ic>scroll</ic>, <ic>load</ic>...
 
+<CodeExercise
+  instruction={`Ajoute un écouteur de clic sur le bouton qui affiche 'Cliqué !' dans la console.`}
+  starterCode={`const btn = document.querySelector("button");\nbtn._____("_____", function () {\n  console.log("Cliqué !");\n});\nbtn.click(); // Simule un clic`}
+  solution={`const btn = document.querySelector("button");\nbtn.addEventListener("click", function () {\n  console.log("Cliqué !");\n});\nbtn.click(); // Simule un clic`}
+  htmlSetup={`<button id="btn">Clique-moi</button>`}
+  expectedOutput={`Cliqué !`}
+  validate="console"
+/>
+
 ## Retirer un écouteur
 
 Pour retirer un écouteur, tu dois utiliser <ic>removeEventListener</ic>. **Attention** : la fonction passée doit être **nommée** (une référence identique). Si tu passes une fonction anonyme, tu ne pourras jamais la retirer.
@@ -99,6 +108,15 @@ innerDiv.addEventListener("click", function (e) {
   console.log("Clic sur inner uniquement");
 });
 ```
+
+<CodeExercise
+  instruction={`Empêche le formulaire de recharger la page et affiche 'Formulaire soumis !' dans la console.`}
+  starterCode={`const form = document.querySelector("form");\nform.addEventListener("submit", function (e) {\n  e._____();\n  console.log("Formulaire soumis !");\n});\nform.dispatchEvent(new Event("submit")); // Simule la soumission`}
+  solution={`const form = document.querySelector("form");\nform.addEventListener("submit", function (e) {\n  e.preventDefault();\n  console.log("Formulaire soumis !");\n});\nform.dispatchEvent(new Event("submit")); // Simule la soumission`}
+  htmlSetup={`<form><input type="text"><button type="submit">Envoyer</button></form>`}
+  expectedOutput={`Formulaire soumis !`}
+  validate="console"
+/>
 
 ## Événements clavier
 
@@ -189,3 +207,12 @@ list.addEventListener("click", function (e) {
   }
 });
 ```
+
+<CodeExercise
+  instruction={`Utilise la délégation d'événements : attache un seul écouteur sur la <ul> qui affiche le texte du <li> cliqué.`}
+  starterCode={`const list = document.querySelector("ul");\nlist.addEventListener("click", function (e) {\n  if (e.target._____ === "_____") {\n    console.log(e.target.textContent);\n  }\n});\n// Simule un clic sur le 2e item\nlist.children[1].click();`}
+  solution={`const list = document.querySelector("ul");\nlist.addEventListener("click", function (e) {\n  if (e.target.tagName === "LI") {\n    console.log(e.target.textContent);\n  }\n});\n// Simule un clic sur le 2e item\nlist.children[1].click();`}
+  htmlSetup={`<ul><li>Pomme</li><li>Banane</li><li>Cerise</li></ul>`}
+  expectedOutput={`Banane`}
+  validate="console"
+/>

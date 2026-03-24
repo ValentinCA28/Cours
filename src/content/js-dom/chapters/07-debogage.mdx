@@ -70,6 +70,14 @@ console.timeEnd("rendu");
 // Affiche : rendu: 2.345ms
 ```
 
+<CodeExercise
+  instruction={`Utilise console.warn pour afficher un avertissement et console.error pour afficher une erreur.`}
+  starterCode={`console._____("Attention : valeur manquante");\nconsole._____("Erreur critique !");`}
+  solution={`console.warn("Attention : valeur manquante");\nconsole.error("Erreur critique !");`}
+  htmlSetup={``}
+  validate="console"
+/>
+
 ## Erreurs courantes
 
 ### TypeError : accès à une propriété de null/undefined
@@ -147,6 +155,15 @@ document.querySelector("#notification")?.classList.add("visible");
 document.querySelector("form")?.addEventListener("submit", handleSubmit);
 ```
 
+<CodeExercise
+  instruction={`Utilise l'optional chaining pour accéder au textContent d'un élément qui n'existe peut-être pas, et affiche le résultat.`}
+  starterCode={`const text = document.querySelector(".inexistant")_____textContent;\nconsole.log(text);`}
+  solution={`const text = document.querySelector(".inexistant")?.textContent;\nconsole.log(text);`}
+  htmlSetup={`<p class="existant">Texte existant</p>`}
+  expectedOutput={`undefined`}
+  validate="console"
+/>
+
 ## Les breakpoints dans DevTools
 
 Les <ic>console.log</ic> c'est bien, mais les **breakpoints** c'est beaucoup plus puissant. Un breakpoint **met en pause** l'exécution du code à un endroit précis, te permettant d'inspecter toutes les variables à ce moment-là.
@@ -218,6 +235,15 @@ async function loadData() {
   }
 }
 ```
+
+<CodeExercise
+  instruction={`Corrige ce code fetch pour qu'il détecte correctement une erreur HTTP 404.`}
+  starterCode={`async function loadData() {\n  try {\n    const response = await fetch("https://jsonplaceholder.typicode.com/invalid-endpoint");\n    // Ajoute la vérification manquante ici\n    \n    const data = await response.json();\n    console.log("OK");\n  } catch (error) {\n    console.log("Erreur détectée");\n  }\n}\nloadData();`}
+  solution={`async function loadData() {\n  try {\n    const response = await fetch("https://jsonplaceholder.typicode.com/invalid-endpoint");\n    if (!response.ok) {\n      throw new Error("Erreur HTTP " + response.status);\n    }\n    const data = await response.json();\n    console.log("OK");\n  } catch (error) {\n    console.log("Erreur détectée");\n  }\n}\nloadData();`}
+  htmlSetup={``}
+  expectedOutput={`Erreur détectée`}
+  validate="console"
+/>
 
 ## Résumé des outils de débogage
 
