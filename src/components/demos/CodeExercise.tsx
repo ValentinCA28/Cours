@@ -110,10 +110,12 @@ ${htmlSetup}
   }
 
   function __sendResults() {
+    // Strip <script> tags from DOM output
+    var __dom = document.body.innerHTML.replace(/<script[\\s\\S]*?<\\/script>/gi, '').trim();
     parent.postMessage({
       __codeExercise: true,
       logs: __logs,
-      dom: document.body.innerHTML,
+      dom: __dom,
       error: __error
     }, "*");
   }

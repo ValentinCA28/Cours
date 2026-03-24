@@ -119,8 +119,8 @@ const exercises: Record<string, Exercise> = {
   },
   "04-preventdefault": {
     instruction: "Empêche le formulaire de recharger la page et affiche 'Formulaire soumis !' dans la console.",
-    starterCode: 'const form = document.querySelector("form");\nform.addEventListener("submit", function (e) {\n  e._____();\n  console.log("Formulaire soumis !");\n});\nform.dispatchEvent(new Event("submit"));',
-    solution: 'const form = document.querySelector("form");\nform.addEventListener("submit", function (e) {\n  e.preventDefault();\n  console.log("Formulaire soumis !");\n});\nform.dispatchEvent(new Event("submit"));',
+    starterCode: 'const form = document.querySelector("form");\nform.addEventListener("submit", function (e) {\n  e._____();\n  console.log("Formulaire soumis !");\n});\nform.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));',
+    solution: 'const form = document.querySelector("form");\nform.addEventListener("submit", function (e) {\n  e.preventDefault();\n  console.log("Formulaire soumis !");\n});\nform.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));',
     htmlSetup: '<form><input type="text"><button type="submit">Envoyer</button></form>',
     expectedOutput: "Formulaire soumis !",
     validate: "console",
