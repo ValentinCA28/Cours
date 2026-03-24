@@ -29,17 +29,7 @@ document.querySelector(".container").appendChild(card);
   Un élément créé avec `createElement` existe en mémoire mais n'est **pas visible** sur la page tant que tu ne l'as pas inséré dans le DOM avec une méthode d'insertion.
 </Callout>
 
-<CodeExercise
-  instruction={`Crée un élément <p>, donne-lui le texte 'Nouveau paragraphe' et ajoute-le dans le conteneur.`}
-  starterCode={`const p = document._____("p");
-p.textContent = "_____";
-document.querySelector(".container")._____(p);`}
-  solution={`const p = document.createElement("p");
-p.textContent = "Nouveau paragraphe";
-document.querySelector(".container").appendChild(p);`}
-  htmlSetup={`<div class="container"><p>Existant</p></div>`}
-  validate="dom"
-/>
+<ExerciseById id="05-createelement" />
 
 ## Configurer un élément
 
@@ -133,19 +123,7 @@ target.insertAdjacentElement("afterend", newEl);
 <!-- afterend -->
 ```
 
-<CodeExercise
-  instruction={`Crée un <li> avec le texte 'Premier !' et insère-le au début de la liste avec prepend.`}
-  starterCode={`const li = document.createElement("li");
-li.textContent = "Premier !";
-const list = document.querySelector("ul");
-list._____(li);`}
-  solution={`const li = document.createElement("li");
-li.textContent = "Premier !";
-const list = document.querySelector("ul");
-list.prepend(li);`}
-  htmlSetup={`<ul><li>A</li><li>B</li><li>C</li></ul>`}
-  validate="dom"
-/>
+<ExerciseById id="05-prepend" />
 
 ## Supprimer un élément
 
@@ -182,15 +160,7 @@ container.innerHTML = ""; // Supprime tout le contenu HTML
   Quand tu vides un conteneur avec `innerHTML = ""`, tous les écouteurs d'événements attachés aux éléments enfants sont **perdus**. Si tu as besoin de conserver certains éléments, supprime-les individuellement avec `remove()`.
 </Callout>
 
-<CodeExercise
-  instruction={`Supprime l'élément avec la classe 'a-supprimer' du DOM.`}
-  starterCode={`const el = document.querySelector(".a-supprimer");
-el._____();`}
-  solution={`const el = document.querySelector(".a-supprimer");
-el.remove();`}
-  htmlSetup={`<div><p>Garde-moi</p><p class="a-supprimer">Supprime-moi !</p><p>Garde-moi aussi</p></div>`}
-  validate="dom"
-/>
+<ExerciseById id="05-remove" />
 
 ## Cloner un élément
 
@@ -214,17 +184,7 @@ document.querySelector(".cards-container").appendChild(clone);
   Passe **true** à `cloneNode()` pour une copie **profonde** (l'élément + tous ses descendants). Avec **false**, tu n'obtiens que l'élément lui-même, sans ses enfants.
 </Callout>
 
-<CodeExercise
-  instruction={`Clone la carte (deep clone) et ajoute la copie dans le conteneur.`}
-  starterCode={`const card = document.querySelector(".card");
-const copy = card._____(_____);
-document.querySelector(".container").appendChild(copy);`}
-  solution={`const card = document.querySelector(".card");
-const copy = card.cloneNode(true);
-document.querySelector(".container").appendChild(copy);`}
-  htmlSetup={`<div class="container"><div class="card"><h3>Titre</h3><p>Contenu</p></div></div>`}
-  validate="dom"
-/>
+<ExerciseById id="05-clonenode" />
 
 ## Démo — Todo List dynamique
 

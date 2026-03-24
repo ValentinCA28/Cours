@@ -3,12 +3,21 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
 interface CodeExerciseProps {
-  instruction: string;
-  starterCode: string;
-  solution: string;
+  id?: string;
+  instruction?: string;
+  starterCode?: string;
+  solution?: string;
   expectedOutput?: string;
   htmlSetup?: string;
   validate?: "console" | "dom";
+  exerciseData?: {
+    instruction: string;
+    starterCode: string;
+    solution: string;
+    htmlSetup: string;
+    expectedOutput?: string;
+    validate: "console" | "dom";
+  };
 }
 
 interface IframeResult {
@@ -17,37 +26,35 @@ interface IframeResult {
   error: string | null;
 }
 
-function normalizeCode(s: string | undefined): string {
-  if (!s) return "";
-  return s;
-}
+export default function CodeExercise(props: CodeExerciseProps) {
+  // Resolve exercise data: from exerciseData prop (passed by wrapper) or direct props
+  const data = props.exerciseData || {
+    instruction: props.instruction || "",
+    starterCode: props.starterCode || "",
+    solution: props.solution || "",
+    htmlSetup: props.htmlSetup || "",
+    expectedOutput: props.expectedOutput,
+    validate: props.validate || "console",
+  };
 
-export default function CodeExercise({
-  instruction,
-  starterCode,
-  solution,
-  expectedOutput,
-  htmlSetup = "",
-  validate = "console",
-}: CodeExerciseProps) {
-  const [code, setCode] = useState(() => normalizeCode(starterCode));
+  const { instruction, starterCode, solution, htmlSetup, expectedOutput, validate } = data;
+
+  const [code, setCode] = useState(starterCode);
   const [result, setResult] = useState<IframeResult | null>(null);
   const [status, setStatus] = useState<"idle" | "success" | "fail">("idle");
   const [showSolution, setShowSolution] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Listen for postMessage from the sandboxed iframe
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
       if (event.data && event.data.__codeExercise) {
-        const data = event.data as IframeResult & { __codeExercise: true };
-        setResult({ logs: data.logs, dom: data.dom, error: data.error });
+        const d = event.data as IframeResult & { __codeExercise: true };
+        setResult({ logs: d.logs, dom: d.dom, error: d.error });
 
         if (expectedOutput) {
           const actual =
-            validate === "console" ? data.logs.join("\n") : data.dom.trim();
-          const expected = expectedOutput.trim();
-          setStatus(actual.trim() === expected ? "success" : "fail");
+            validate === "console" ? d.logs.join("\n") : d.dom.trim();
+          setStatus(actual.trim() === expectedOutput.trim() ? "success" : "fail");
         } else {
           setStatus("idle");
         }
@@ -62,8 +69,6 @@ export default function CodeExercise({
     setResult(null);
     setStatus("idle");
 
-    // We delay postMessage to allow async events (DOMContentLoaded, fetch, etc.)
-    // to complete before capturing the results
     const srcdoc = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -104,8 +109,6 @@ ${htmlSetup}
     __error = e.message || String(e);
   }
 
-  // Delay sending results to capture async operations
-  // (DOMContentLoaded, setTimeout, fetch, Promises, etc.)
   function __sendResults() {
     parent.postMessage({
       __codeExercise: true,
@@ -115,7 +118,6 @@ ${htmlSetup}
     }, "*");
   }
 
-  // Wait for: microtasks, DOMContentLoaded, then a small delay for fetch/async
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function() {
       setTimeout(__sendResults, 300);
@@ -134,7 +136,7 @@ ${htmlSetup}
   }, [code, htmlSetup]);
 
   const handleReset = useCallback(() => {
-    setCode(normalizeCode(starterCode));
+    setCode(starterCode);
     setResult(null);
     setStatus("idle");
   }, [starterCode]);
@@ -145,19 +147,14 @@ ${htmlSetup}
       : result.dom.trim()
     : null;
 
-  const normalizedSolution = normalizeCode(solution);
-
   return (
     <div className="bg-surface border border-border rounded-xl p-5 my-6">
-      {/* Label */}
       <span className="font-mono text-xs uppercase tracking-wider text-accent mb-1 block">
         📝 Exercice
       </span>
 
-      {/* Instruction */}
       <p className="text-sm text-text mb-3">{instruction}</p>
 
-      {/* Code textarea */}
       <textarea
         value={code}
         onChange={(e) => setCode(e.target.value)}
@@ -166,7 +163,6 @@ ${htmlSetup}
         style={{ minHeight: 80 }}
       />
 
-      {/* Buttons */}
       <div className="flex flex-wrap gap-2 mt-3">
         <button
           onClick={handleRun}
@@ -188,7 +184,6 @@ ${htmlSetup}
         </button>
       </div>
 
-      {/* Hidden iframe for sandboxed execution */}
       <iframe
         ref={iframeRef}
         sandbox="allow-scripts"
@@ -196,7 +191,6 @@ ${htmlSetup}
         title="code-exercise-sandbox"
       />
 
-      {/* Output area */}
       {result && (
         <div className="bg-code-bg rounded-lg p-3 font-mono text-[13px] mt-3">
           {result.error ? (
@@ -222,13 +216,12 @@ ${htmlSetup}
         </div>
       )}
 
-      {/* Solution block */}
       {showSolution && (
         <div className="bg-code-bg border border-border rounded-lg p-4 mt-3">
           <span className="text-xs text-muted font-mono uppercase tracking-wider block mb-2">
             Solution
           </span>
-          <pre className="whitespace-pre-wrap font-mono text-[13px] text-green m-0 p-0 bg-transparent border-0">{normalizedSolution}</pre>
+          <pre className="whitespace-pre-wrap font-mono text-[13px] text-green m-0 p-0 bg-transparent border-0">{solution}</pre>
         </div>
       )}
     </div>

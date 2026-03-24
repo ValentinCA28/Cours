@@ -8,6 +8,7 @@ import {
   TodoDemo,
   FetchDemo,
   CodeExercise,
+  ExerciseById,
 } from "@/components/demos";
 
 /* ── Callout ─────────────────────────────────────────────── */
@@ -130,4 +131,5 @@ export const components: MDXComponents = {
   TodoDemo,
   FetchDemo,
   CodeExercise,
+  ExerciseById,
 };
