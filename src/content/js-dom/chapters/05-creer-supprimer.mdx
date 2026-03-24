@@ -31,8 +31,12 @@ document.querySelector(".container").appendChild(card);
 
 <CodeExercise
   instruction={`Crée un élément <p>, donne-lui le texte 'Nouveau paragraphe' et ajoute-le dans le conteneur.`}
-  starterCode={`const p = document._____("p");\np.textContent = "_____";\ndocument.querySelector(".container")._____(p);`}
-  solution={`const p = document.createElement("p");\np.textContent = "Nouveau paragraphe";\ndocument.querySelector(".container").appendChild(p);`}
+  starterCode={`const p = document._____("p");
+p.textContent = "_____";
+document.querySelector(".container")._____(p);`}
+  solution={`const p = document.createElement("p");
+p.textContent = "Nouveau paragraphe";
+document.querySelector(".container").appendChild(p);`}
   htmlSetup={`<div class="container"><p>Existant</p></div>`}
   validate="dom"
 />
@@ -131,8 +135,14 @@ target.insertAdjacentElement("afterend", newEl);
 
 <CodeExercise
   instruction={`Crée un <li> avec le texte 'Premier !' et insère-le au début de la liste avec prepend.`}
-  starterCode={`const li = document.createElement("li");\nli.textContent = "Premier !";\nconst list = document.querySelector("ul");\nlist._____(li);`}
-  solution={`const li = document.createElement("li");\nli.textContent = "Premier !";\nconst list = document.querySelector("ul");\nlist.prepend(li);`}
+  starterCode={`const li = document.createElement("li");
+li.textContent = "Premier !";
+const list = document.querySelector("ul");
+list._____(li);`}
+  solution={`const li = document.createElement("li");
+li.textContent = "Premier !";
+const list = document.querySelector("ul");
+list.prepend(li);`}
   htmlSetup={`<ul><li>A</li><li>B</li><li>C</li></ul>`}
   validate="dom"
 />
@@ -174,8 +184,10 @@ container.innerHTML = ""; // Supprime tout le contenu HTML
 
 <CodeExercise
   instruction={`Supprime l'élément avec la classe 'a-supprimer' du DOM.`}
-  starterCode={`const el = document.querySelector(".a-supprimer");\nel._____();`}
-  solution={`const el = document.querySelector(".a-supprimer");\nel.remove();`}
+  starterCode={`const el = document.querySelector(".a-supprimer");
+el._____();`}
+  solution={`const el = document.querySelector(".a-supprimer");
+el.remove();`}
   htmlSetup={`<div><p>Garde-moi</p><p class="a-supprimer">Supprime-moi !</p><p>Garde-moi aussi</p></div>`}
   validate="dom"
 />
@@ -204,8 +216,12 @@ document.querySelector(".cards-container").appendChild(clone);
 
 <CodeExercise
   instruction={`Clone la carte (deep clone) et ajoute la copie dans le conteneur.`}
-  starterCode={`const card = document.querySelector(".card");\nconst copy = card._____(_____);\ndocument.querySelector(".container").appendChild(copy);`}
-  solution={`const card = document.querySelector(".card");\nconst copy = card.cloneNode(true);\ndocument.querySelector(".container").appendChild(copy);`}
+  starterCode={`const card = document.querySelector(".card");
+const copy = card._____(_____);
+document.querySelector(".container").appendChild(copy);`}
+  solution={`const card = document.querySelector(".card");
+const copy = card.cloneNode(true);
+document.querySelector(".container").appendChild(copy);`}
   htmlSetup={`<div class="container"><div class="card"><h3>Titre</h3><p>Contenu</p></div></div>`}
   validate="dom"
 />

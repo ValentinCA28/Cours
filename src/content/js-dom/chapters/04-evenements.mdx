@@ -21,8 +21,16 @@ Tu peux écouter toutes sortes d'événements : <ic>click</ic>, <ic>dblclick</ic
 
 <CodeExercise
   instruction={`Ajoute un écouteur de clic sur le bouton qui affiche 'Cliqué !' dans la console.`}
-  starterCode={`const btn = document.querySelector("button");\nbtn._____("_____", function () {\n  console.log("Cliqué !");\n});\nbtn.click(); // Simule un clic`}
-  solution={`const btn = document.querySelector("button");\nbtn.addEventListener("click", function () {\n  console.log("Cliqué !");\n});\nbtn.click(); // Simule un clic`}
+  starterCode={`const btn = document.querySelector("button");
+btn._____("_____", function () {
+  console.log("Cliqué !");
+});
+btn.click(); // Simule un clic`}
+  solution={`const btn = document.querySelector("button");
+btn.addEventListener("click", function () {
+  console.log("Cliqué !");
+});
+btn.click(); // Simule un clic`}
   htmlSetup={`<button id="btn">Clique-moi</button>`}
   expectedOutput={`Cliqué !`}
   validate="console"
@@ -111,8 +119,18 @@ innerDiv.addEventListener("click", function (e) {
 
 <CodeExercise
   instruction={`Empêche le formulaire de recharger la page et affiche 'Formulaire soumis !' dans la console.`}
-  starterCode={`const form = document.querySelector("form");\nform.addEventListener("submit", function (e) {\n  e._____();\n  console.log("Formulaire soumis !");\n});\nform.dispatchEvent(new Event("submit")); // Simule la soumission`}
-  solution={`const form = document.querySelector("form");\nform.addEventListener("submit", function (e) {\n  e.preventDefault();\n  console.log("Formulaire soumis !");\n});\nform.dispatchEvent(new Event("submit")); // Simule la soumission`}
+  starterCode={`const form = document.querySelector("form");
+form.addEventListener("submit", function (e) {
+  e._____();
+  console.log("Formulaire soumis !");
+});
+form.dispatchEvent(new Event("submit")); // Simule la soumission`}
+  solution={`const form = document.querySelector("form");
+form.addEventListener("submit", function (e) {
+  e.preventDefault();
+  console.log("Formulaire soumis !");
+});
+form.dispatchEvent(new Event("submit")); // Simule la soumission`}
   htmlSetup={`<form><input type="text"><button type="submit">Envoyer</button></form>`}
   expectedOutput={`Formulaire soumis !`}
   validate="console"
@@ -210,8 +228,22 @@ list.addEventListener("click", function (e) {
 
 <CodeExercise
   instruction={`Utilise la délégation d'événements : attache un seul écouteur sur la <ul> qui affiche le texte du <li> cliqué.`}
-  starterCode={`const list = document.querySelector("ul");\nlist.addEventListener("click", function (e) {\n  if (e.target._____ === "_____") {\n    console.log(e.target.textContent);\n  }\n});\n// Simule un clic sur le 2e item\nlist.children[1].click();`}
-  solution={`const list = document.querySelector("ul");\nlist.addEventListener("click", function (e) {\n  if (e.target.tagName === "LI") {\n    console.log(e.target.textContent);\n  }\n});\n// Simule un clic sur le 2e item\nlist.children[1].click();`}
+  starterCode={`const list = document.querySelector("ul");
+list.addEventListener("click", function (e) {
+  if (e.target._____ === "_____") {
+    console.log(e.target.textContent);
+  }
+});
+// Simule un clic sur le 2e item
+list.children[1].click();`}
+  solution={`const list = document.querySelector("ul");
+list.addEventListener("click", function (e) {
+  if (e.target.tagName === "LI") {
+    console.log(e.target.textContent);
+  }
+});
+// Simule un clic sur le 2e item
+list.children[1].click();`}
   htmlSetup={`<ul><li>Pomme</li><li>Banane</li><li>Cerise</li></ul>`}
   expectedOutput={`Banane`}
   validate="console"

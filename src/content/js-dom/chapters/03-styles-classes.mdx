@@ -38,8 +38,12 @@ box.style.backgroundColor = "";
 
 <CodeExercise
   instruction="Change la couleur de fond de la boîte en 'tomato' et sa taille de police en '20px'."
-  starterCode={`const box = document.querySelector(".box");\nbox.style._____ = "tomato";\nbox.style._____ = "20px";`}
-  solution={`const box = document.querySelector(".box");\nbox.style.backgroundColor = "tomato";\nbox.style.fontSize = "20px";`}
+  starterCode={`const box = document.querySelector(".box");
+box.style._____ = "tomato";
+box.style._____ = "20px";`}
+  solution={`const box = document.querySelector(".box");
+box.style.backgroundColor = "tomato";
+box.style.fontSize = "20px";`}
   htmlSetup={`<div class="box" style="padding:10px;">Ma boîte</div>`}
   validate="dom"
 />
@@ -109,8 +113,12 @@ menu.classList.toggle("open");
 
 <CodeExercise
   instruction="Bascule (toggle) la classe 'visible' sur l'élément .menu et affiche si elle est maintenant présente."
-  starterCode={`const menu = document.querySelector(".menu");\nconst result = menu.classList._____("visible");\nconsole.log(result);`}
-  solution={`const menu = document.querySelector(".menu");\nconst result = menu.classList.toggle("visible");\nconsole.log(result);`}
+  starterCode={`const menu = document.querySelector(".menu");
+const result = menu.classList._____("visible");
+console.log(result);`}
+  solution={`const menu = document.querySelector(".menu");
+const result = menu.classList.toggle("visible");
+console.log(result);`}
   htmlSetup={`<nav class="menu">Navigation</nav>`}
   expectedOutput="true"
   validate="console"
@@ -161,8 +169,14 @@ button.addEventListener("click", function () {
 
 <CodeExercise
   instruction="Ajoute la classe 'active' à la carte, puis remplace-la par 'selected'."
-  starterCode={`const card = document.querySelector(".card");\ncard.classList._____("active");\ncard.classList._____("active", "selected");\nconsole.log(card.className);`}
-  solution={`const card = document.querySelector(".card");\ncard.classList.add("active");\ncard.classList.replace("active", "selected");\nconsole.log(card.className);`}
+  starterCode={`const card = document.querySelector(".card");
+card.classList._____("active");
+card.classList._____("active", "selected");
+console.log(card.className);`}
+  solution={`const card = document.querySelector(".card");
+card.classList.add("active");
+card.classList.replace("active", "selected");
+console.log(card.className);`}
   htmlSetup={`<div class="card">Ma carte</div>`}
   expectedOutput="card selected"
   validate="console"

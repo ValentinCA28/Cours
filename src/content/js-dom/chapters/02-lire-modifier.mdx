@@ -32,8 +32,10 @@ title.textContent = "<em>Important</em>";
 
 <CodeExercise
   instruction="Change le texte du titre en 'Salut le DOM !' avec textContent."
-  starterCode={`const title = document.querySelector("h1");\ntitle._____ = "_____";`}
-  solution={`const title = document.querySelector("h1");\ntitle.textContent = "Salut le DOM !";`}
+  starterCode={`const title = document.querySelector("h1");
+title._____ = "_____";`}
+  solution={`const title = document.querySelector("h1");
+title.textContent = "Salut le DOM !";`}
   htmlSetup={`<h1>Ancien titre</h1>`}
   validate="dom"
 />
@@ -67,8 +69,10 @@ container.textContent = userInput; // Affiche le texte brut
 
 <CodeExercise
   instruction="Utilise innerHTML pour ajouter un paragraphe en gras dans le conteneur."
-  starterCode={`const box = document.querySelector("#box");\nbox._____ = "<strong>Texte en gras</strong>";`}
-  solution={`const box = document.querySelector("#box");\nbox.innerHTML = "<strong>Texte en gras</strong>";`}
+  starterCode={`const box = document.querySelector("#box");
+box._____ = "<strong>Texte en gras</strong>";`}
+  solution={`const box = document.querySelector("#box");
+box.innerHTML = "<strong>Texte en gras</strong>";`}
   htmlSetup={`<div id="box">Contenu original</div>`}
   validate="dom"
 />
@@ -129,8 +133,12 @@ link.removeAttribute("target");
 
 <CodeExercise
   instruction="Lis l'attribut href du lien et affiche-le dans la console."
-  starterCode={`const link = document.querySelector("a");\nconst url = link._____("href");\nconsole.log(url);`}
-  solution={`const link = document.querySelector("a");\nconst url = link.getAttribute("href");\nconsole.log(url);`}
+  starterCode={`const link = document.querySelector("a");
+const url = link._____("href");
+console.log(url);`}
+  solution={`const link = document.querySelector("a");
+const url = link.getAttribute("href");
+console.log(url);`}
   htmlSetup={`<a href="https://example.com">Mon lien</a>`}
   expectedOutput="https://example.com"
   validate="console"
@@ -190,8 +198,10 @@ Note que les noms avec des tirets sont convertis en **camelCase** : <InlineCode>
 
 <CodeExercise
   instruction="Lis la valeur de l'attribut data-role de l'élément #user et affiche-la."
-  starterCode={`const user = document.querySelector("#user");\nconsole.log(user._____.role);`}
-  solution={`const user = document.querySelector("#user");\nconsole.log(user.dataset.role);`}
+  starterCode={`const user = document.querySelector("#user");
+console.log(user._____.role);`}
+  solution={`const user = document.querySelector("#user");
+console.log(user.dataset.role);`}
   htmlSetup={`<div id="user" data-role="admin" data-user-id="42">Alice</div>`}
   expectedOutput="admin"
   validate="console"
