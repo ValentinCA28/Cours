@@ -17,6 +17,12 @@ interface IframeResult {
   error: string | null;
 }
 
+function normalizeCode(s: string | undefined): string {
+  if (!s) return "";
+  // Handle both literal \n (from MDX template strings) and real newlines
+  return s.replace(/\\n/g, "\n");
+}
+
 export default function CodeExercise({
   instruction,
   starterCode,
@@ -25,7 +31,7 @@ export default function CodeExercise({
   htmlSetup = "",
   validate = "console",
 }: CodeExerciseProps) {
-  const [code, setCode] = useState((starterCode || "").replace(/\\n/g, "\n"));
+  const [code, setCode] = useState(() => normalizeCode(starterCode));
   const [result, setResult] = useState<IframeResult | null>(null);
   const [status, setStatus] = useState<"idle" | "success" | "fail">("idle");
   const [showSolution, setShowSolution] = useState(false);
@@ -57,6 +63,8 @@ export default function CodeExercise({
     setResult(null);
     setStatus("idle");
 
+    // We delay postMessage to allow async events (DOMContentLoaded, fetch, etc.)
+    // to complete before capturing the results
     const srcdoc = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -66,12 +74,28 @@ ${htmlSetup}
 (function() {
   var __logs = [];
   var __origLog = console.log;
+  var __origWarn = console.warn;
+  var __origError = console.error;
   console.log = function() {
     var args = Array.prototype.slice.call(arguments);
     __logs.push(args.map(function(a) {
       return typeof a === "object" ? JSON.stringify(a) : String(a);
     }).join(" "));
     __origLog.apply(console, arguments);
+  };
+  console.warn = function() {
+    var args = Array.prototype.slice.call(arguments);
+    __logs.push("[warn] " + args.map(function(a) {
+      return typeof a === "object" ? JSON.stringify(a) : String(a);
+    }).join(" "));
+    __origWarn.apply(console, arguments);
+  };
+  console.error = function() {
+    var args = Array.prototype.slice.call(arguments);
+    __logs.push("[error] " + args.map(function(a) {
+      return typeof a === "object" ? JSON.stringify(a) : String(a);
+    }).join(" "));
+    __origError.apply(console, arguments);
   };
 
   var __error = null;
@@ -81,25 +105,37 @@ ${htmlSetup}
     __error = e.message || String(e);
   }
 
-  parent.postMessage({
-    __codeExercise: true,
-    logs: __logs,
-    dom: document.body.innerHTML,
-    error: __error
-  }, "*");
+  // Delay sending results to capture async operations
+  // (DOMContentLoaded, setTimeout, fetch, Promises, etc.)
+  function __sendResults() {
+    parent.postMessage({
+      __codeExercise: true,
+      logs: __logs,
+      dom: document.body.innerHTML,
+      error: __error
+    }, "*");
+  }
+
+  // Wait for: microtasks, DOMContentLoaded, then a small delay for fetch/async
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function() {
+      setTimeout(__sendResults, 300);
+    });
+  } else {
+    setTimeout(__sendResults, 300);
+  }
 })();
 </script>
 </body>
 </html>`;
 
-    // Force iframe reload by removing and re-setting srcdoc
     if (iframeRef.current) {
       iframeRef.current.srcdoc = srcdoc;
     }
   }, [code, htmlSetup]);
 
   const handleReset = useCallback(() => {
-    setCode((starterCode || "").replace(/\\n/g, "\n"));
+    setCode(normalizeCode(starterCode));
     setResult(null);
     setStatus("idle");
   }, [starterCode]);
@@ -109,6 +145,8 @@ ${htmlSetup}
       ? result.logs.join("\n")
       : result.dom.trim()
     : null;
+
+  const normalizedSolution = normalizeCode(solution);
 
   return (
     <div className="bg-surface border border-border rounded-xl p-5 my-6">
@@ -191,9 +229,7 @@ ${htmlSetup}
           <span className="text-xs text-muted font-mono uppercase tracking-wider block mb-2">
             Solution
           </span>
-          <pre className="whitespace-pre-wrap font-mono text-[13px] text-green/80 m-0">
-            {(solution || "").replace(/\\n/g, "\n")}
-          </pre>
+          <pre className="whitespace-pre-wrap font-mono text-[13px] text-green/80 m-0">{normalizedSolution}</pre>
         </div>
       )}
     </div>
