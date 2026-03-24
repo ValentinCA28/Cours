@@ -51,8 +51,8 @@ export default function CodeExercise(props: CodeExerciseProps) {
         const d = event.data as IframeResult & { __codeExercise: true };
         setResult({ logs: d.logs, dom: d.dom, error: d.error });
 
-        // For DOM exercises, build preview HTML
-        if (validate === "dom" && !d.error) {
+        // Show DOM preview for any exercise that has htmlSetup
+        if (htmlSetup && !d.error) {
           setPreviewHtml(d.dom);
         }
 
@@ -69,7 +69,7 @@ export default function CodeExercise(props: CodeExerciseProps) {
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [expectedOutput, validate]);
+  }, [expectedOutput, validate, htmlSetup]);
 
   const handleRun = useCallback(() => {
     setResult(null);
@@ -219,8 +219,8 @@ ${htmlSetup}
                 </div>
               )}
 
-              {/* DOM visual preview */}
-              {validate === "dom" && previewHtml && (
+              {/* DOM visual preview — shown for any exercise with htmlSetup */}
+              {previewHtml && (
                 <div className="rounded-lg border border-border overflow-hidden">
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-surface2 border-b border-border">
                     <div className="flex gap-1.5">
@@ -238,11 +238,30 @@ ${htmlSetup}
 <head>
 <meta charset="utf-8">
 <style>
-  body { font-family: sans-serif; font-size: 14px; color: #e2e8f0; background: #0d0f17; padding: 12px; margin: 0; }
-  * { box-sizing: border-box; }
-  div, p, span, li, h1, h2, h3, h4, h5, h6 { margin: 4px 0; }
-  ul, ol { padding-left: 20px; }
-  .card, .box, .container { border: 1px dashed #252a3d; border-radius: 6px; padding: 8px; margin: 4px 0; }
+  body { font-family: system-ui, sans-serif; font-size: 14px; color: #e2e8f0; background: #0d0f17; padding: 16px; margin: 0; line-height: 1.5; }
+  * { box-sizing: border-box; transition: all 0.2s ease; }
+  div, p, span, h1, h2, h3, h4, h5, h6 { margin: 4px 0; }
+  ul, ol { padding-left: 20px; margin: 4px 0; }
+  li { padding: 2px 0; }
+  a { color: #60a5fa; text-decoration: underline; }
+  button { background: #f97316; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  input, textarea, select { background: #1c2030; border: 1px solid #252a3d; border-radius: 6px; padding: 6px 10px; color: #e2e8f0; font-size: 13px; }
+  form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .card, .box, .container, .menu, .target, .inner, .parent, .post, article {
+    border: 1px dashed #252a3d; border-radius: 8px; padding: 10px; margin: 6px 0;
+  }
+  .active { border-color: #f97316; background: rgba(249,115,22,0.1); }
+  .visible { opacity: 1; }
+  .hidden { opacity: 0.3; }
+  .selected { border-color: #60a5fa; background: rgba(96,165,250,0.1); }
+  .open { border-color: #4ade80; background: rgba(74,222,128,0.1); }
+  .highlighted { background: rgba(251,191,36,0.15); }
+  .rouge { color: #f472b6; }
+  strong, b { color: #fff; font-weight: 600; }
+  em, i { color: #c084fc; }
+  h1 { font-size: 22px; font-weight: 700; }
+  h2 { font-size: 18px; font-weight: 600; }
+  h3 { font-size: 16px; font-weight: 600; }
 </style>
 </head>
 <body>${previewHtml}</body>
