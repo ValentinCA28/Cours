@@ -1,0 +1,182 @@
+---
+number: "08"
+title: "Promises & async/await"
+subtitle: "Gérer l'asynchrone moderne en JavaScript."
+---
+
+## Pourquoi les Promises ?
+
+Avant ES6, l'asynchrone reposait sur les **callbacks**. Tu passais une fonction qui était appelée plus tard, une fois l'opération terminée. Le souci : quand plusieurs opérations dépendent les unes des autres, on tombe vite dans le **callback hell**.
+
+```js
+// Callback hell : code en escalier, dur à lire et à maintenir
+getUser(1, function (user) {
+  getOrders(user.id, function (orders) {
+    getOrderDetails(orders[0].id, function (details) {
+      sendEmail(user.email, details, function (result) {
+        console.log("Email envoyé !");
+      });
+    });
+  });
+});
+```
+
+Les **Promises** apportent une solution propre : un objet qui représente une valeur **future**, encore inconnue, et qui permet de chaîner les opérations de manière linéaire.
+
+## Créer une Promise
+
+Une Promise se construit avec un **executor**, une fonction qui reçoit deux arguments : <InlineCode>resolve</InlineCode> (succès) et <InlineCode>reject</InlineCode> (échec).
+
+```js
+// Crée une Promise qui résout après 1 seconde
+const wait = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve("Terminé !");
+  }, 1000);
+});
+
+wait.then((value) => console.log(value)); // "Terminé !" après 1s
+```
+
+### Les trois états
+
+Une Promise se trouve toujours dans **un seul** des trois états suivants :
+
+| État | Signification |
+|---|---|
+| <InlineCode>pending</InlineCode> | En attente, aucun résultat |
+| <InlineCode>fulfilled</InlineCode> | Réussie, on a une valeur |
+| <InlineCode>rejected</InlineCode> | Échouée, on a une erreur |
+
+Une fois passée à <InlineCode>fulfilled</InlineCode> ou <InlineCode>rejected</InlineCode>, une Promise est **settled** : son état ne changera plus.
+
+<ExerciseById id="08-promise-basic" />
+
+## Chaîner avec `.then`, `.catch`, `.finally`
+
+Chaque appel à <InlineCode>.then</InlineCode> retourne une **nouvelle Promise**, ce qui permet le chaînage.
+
+```js
+fetch("/api/user")
+  .then((response) => response.json())   // Transformer la réponse
+  .then((user) => {
+    console.log(user.name);
+    return user.id;                       // Passe la valeur au .then suivant
+  })
+  .then((id) => fetch(`/api/orders/${id}`))
+  .then((res) => res.json())
+  .then((orders) => console.log(orders))
+  .catch((error) => console.error("Erreur :", error)) // Attrape toute erreur
+  .finally(() => console.log("Terminé"));            // Toujours exécuté
+```
+
+- <InlineCode>.then(onFulfilled)</InlineCode> : appelé en cas de succès
+- <InlineCode>.catch(onRejected)</InlineCode> : appelé en cas d'erreur (équivalent à <InlineCode>.then(null, fn)</InlineCode>)
+- <InlineCode>.finally(fn)</InlineCode> : appelé quoi qu'il arrive (utile pour fermer un loader, par exemple)
+
+## `async / await` <Badge>recommandé</Badge>
+
+<InlineCode>async/await</InlineCode> est du **sucre syntaxique** au-dessus des Promises. Le code redevient linéaire, comme du synchrone, tout en restant asynchrone.
+
+```js
+// Le même exemple, version async/await
+async function loadUserOrders() {
+  try {
+    const userRes = await fetch("/api/user");
+    const user = await userRes.json();
+
+    const ordersRes = await fetch(`/api/orders/${user.id}`);
+    const orders = await ordersRes.json();
+
+    console.log(orders);
+  } catch (error) {
+    console.error("Erreur :", error);
+  } finally {
+    console.log("Terminé");
+  }
+}
+
+loadUserOrders();
+```
+
+<Callout variant="info" title="async retourne toujours une Promise">
+  Une fonction marquée <InlineCode>async</InlineCode> retourne **automatiquement** une Promise. Si tu fais <InlineCode>return 42</InlineCode> dans une async function, l'appelant reçoit <InlineCode>Promise&lt;42&gt;</InlineCode>. De même, <InlineCode>throw new Error()</InlineCode> dans une async function rejette la Promise.
+</Callout>
+
+```js
+async function getNumber() {
+  return 42; // Équivalent à : return Promise.resolve(42);
+}
+
+getNumber().then((n) => console.log(n)); // 42
+```
+
+<ExerciseById id="08-async-await" />
+
+## Exécuter en parallèle
+
+### `Promise.all` — tout ou rien
+
+Lance plusieurs Promises **en parallèle** et attend que toutes soient résolues. Si **une seule** échoue, la Promise globale est rejetée immédiatement.
+
+```js
+// Lance les 3 fetch en même temps, pas les uns après les autres
+const [users, posts, comments] = await Promise.all([
+  fetch("/api/users").then((r) => r.json()),
+  fetch("/api/posts").then((r) => r.json()),
+  fetch("/api/comments").then((r) => r.json()),
+]);
+
+console.log(users, posts, comments);
+```
+
+### `Promise.allSettled` — tolérant aux erreurs
+
+Attend que **toutes** les Promises soient settled (résolues ou rejetées) et retourne un tableau d'objets <InlineCode>{ status, value }</InlineCode> ou <InlineCode>{ status, reason }</InlineCode>. Aucune n'échoue jamais globalement.
+
+```js
+const results = await Promise.allSettled([
+  fetch("/api/users"),
+  fetch("/api/might-fail"),
+  fetch("/api/posts"),
+]);
+
+results.forEach((result, i) => {
+  if (result.status === "fulfilled") {
+    console.log(`#${i} OK :`, result.value);
+  } else {
+    console.warn(`#${i} KO :`, result.reason);
+  }
+});
+```
+
+### `Promise.race` — la première qui finit
+
+Retourne la **première** Promise settled (succès ou échec). Très utile pour implémenter un timeout.
+
+```js
+function timeout(ms) {
+  return new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Timeout")), ms)
+  );
+}
+
+// Soit le fetch finit en moins de 3s, soit on rejette avec "Timeout"
+const data = await Promise.race([
+  fetch("/api/slow").then((r) => r.json()),
+  timeout(3000),
+]);
+```
+
+<Callout variant="warn" title="Attention au parallélisme">
+  Quand tes opérations sont **indépendantes**, lance-les avec <InlineCode>Promise.all</InlineCode> : c'est bien plus rapide que de les enchaîner avec <InlineCode>await</InlineCode> séquentiels. Mais si la 2e dépend du résultat de la 1re, garde le séquentiel.
+</Callout>
+
+## Récapitulatif
+
+| Méthode | Comportement | Usage typique |
+|---|---|---|
+| <InlineCode>Promise.all</InlineCode> | Toutes ou rien | Charges parallèles obligatoires |
+| <InlineCode>Promise.allSettled</InlineCode> | Attend tout, ne rejette jamais | Reporting, batchs partiels |
+| <InlineCode>Promise.race</InlineCode> | Premier settled | Timeouts, fallback |
+| <InlineCode>Promise.any</InlineCode> | Premier fulfilled | Plusieurs sources, on garde la 1re qui marche |

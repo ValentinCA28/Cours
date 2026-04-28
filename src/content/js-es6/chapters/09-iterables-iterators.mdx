@@ -1,0 +1,167 @@
+---
+number: "09"
+title: "Iterables & Iterators"
+subtitle: "Le protocole d'itération de JavaScript."
+---
+
+## Le protocole d'itération
+
+ES6 a introduit deux protocoles standardisés pour parcourir des données : **iterable** et **iterator**. Ce sont eux qui permettent à <InlineCode>for...of</InlineCode>, au spread <InlineCode>...</InlineCode> et à la destructuration de fonctionner sur les arrays, strings, Map, Set, etc.
+
+### Un iterator, c'est quoi ?
+
+Un **iterator** est un objet qui possède une méthode <InlineCode>next()</InlineCode>. À chaque appel, <InlineCode>next()</InlineCode> retourne un objet <InlineCode>{ value, done }</InlineCode>.
+
+```js
+// Un iterator manuel sur les nombres 1, 2, 3
+function makeIterator() {
+  let i = 0;
+  const data = [1, 2, 3];
+  return {
+    next() {
+      if (i < data.length) {
+        return { value: data[i++], done: false };
+      }
+      return { value: undefined, done: true };
+    },
+  };
+}
+
+const it = makeIterator();
+console.log(it.next()); // { value: 1, done: false }
+console.log(it.next()); // { value: 2, done: false }
+console.log(it.next()); // { value: 3, done: false }
+console.log(it.next()); // { value: undefined, done: true }
+```
+
+### Iterable vs iterator
+
+- Un **iterable** est un objet qui sait **produire** un iterator. Il possède une méthode spéciale <InlineCode>[Symbol.iterator]()</InlineCode>.
+- Un **iterator** est l'objet qui **avance** étape par étape avec <InlineCode>next()</InlineCode>.
+
+```js
+const arr = [10, 20, 30];
+
+// arr est iterable : on peut récupérer son iterator
+const it = arr[Symbol.iterator]();
+console.log(it.next()); // { value: 10, done: false }
+console.log(it.next()); // { value: 20, done: false }
+console.log(it.next()); // { value: 30, done: false }
+console.log(it.next()); // { value: undefined, done: true }
+```
+
+C'est ce qui rend <InlineCode>for...of</InlineCode> magique : sous le capot, il appelle <InlineCode>[Symbol.iterator]()</InlineCode> puis <InlineCode>next()</InlineCode> jusqu'à <InlineCode>done: true</InlineCode>.
+
+## Créer un iterable custom
+
+Tu peux rendre **n'importe quel objet** iterable en lui ajoutant <InlineCode>[Symbol.iterator]</InlineCode>.
+
+```js
+// Un iterable qui produit les entiers de start à end (inclus)
+function range(start, end) {
+  return {
+    [Symbol.iterator]() {
+      let current = start;
+      return {
+        next() {
+          if (current <= end) {
+            return { value: current++, done: false };
+          }
+          return { value: undefined, done: true };
+        },
+      };
+    },
+  };
+}
+
+for (const n of range(1, 5)) {
+  console.log(n); // 1, 2, 3, 4, 5
+}
+
+// Spread fonctionne aussi puisque c'est iterable
+const arr = [...range(1, 5)]; // [1, 2, 3, 4, 5]
+```
+
+<ExerciseById id="09-iterator-custom" />
+
+## Generators : le raccourci magique
+
+Écrire un iterator à la main, c'est verbeux. Les **generators** automatisent tout ça avec une syntaxe <InlineCode>function*</InlineCode> et le mot-clé <InlineCode>yield</InlineCode>.
+
+```js
+// Le même range, version generator
+function* range(start, end) {
+  for (let i = start; i <= end; i++) {
+    yield i; // Suspend l'exécution et "donne" la valeur
+  }
+}
+
+for (const n of range(1, 5)) {
+  console.log(n); // 1, 2, 3, 4, 5
+}
+```
+
+Chaque <InlineCode>yield</InlineCode> **suspend** l'exécution de la fonction. Au prochain appel à <InlineCode>next()</InlineCode>, la fonction reprend exactement là où elle s'était arrêtée.
+
+```js
+function* counter() {
+  console.log("Start");
+  yield 1;
+  console.log("Après le 1");
+  yield 2;
+  console.log("Après le 2");
+  yield 3;
+  console.log("End");
+}
+
+const gen = counter();
+gen.next(); // "Start"        → { value: 1, done: false }
+gen.next(); // "Après le 1"   → { value: 2, done: false }
+gen.next(); // "Après le 2"   → { value: 3, done: false }
+gen.next(); // "End"          → { value: undefined, done: true }
+```
+
+### Generators infinis
+
+Comme un generator est **paresseux** (lazy), on peut créer des séquences infinies sans saturer la mémoire.
+
+```js
+function* naturalNumbers() {
+  let n = 1;
+  while (true) {
+    yield n++;
+  }
+}
+
+const nums = naturalNumbers();
+console.log(nums.next().value); // 1
+console.log(nums.next().value); // 2
+console.log(nums.next().value); // 3
+// On peut continuer à l'infini, tant qu'on n'appelle pas next() trop souvent
+```
+
+<Callout variant="info" title="Generator = iterable automatique">
+  Un generator est **à la fois** un iterator (il a <InlineCode>next()</InlineCode>) **et** un iterable (il a <InlineCode>[Symbol.iterator]()</InlineCode> qui retourne lui-même). Tu peux donc l'utiliser directement avec <InlineCode>for...of</InlineCode>, le spread <InlineCode>...</InlineCode> ou <InlineCode>Array.from()</InlineCode>.
+</Callout>
+
+```js
+function* abc() {
+  yield "a";
+  yield "b";
+  yield "c";
+}
+
+// Les 3 fonctionnent
+for (const c of abc()) console.log(c);
+const arr = [...abc()];          // ["a", "b", "c"]
+const arr2 = Array.from(abc());  // ["a", "b", "c"]
+```
+
+<ExerciseById id="09-generator" />
+
+## Pourquoi c'est utile ?
+
+- **Itérer sur des structures custom** sans construire un tableau intermédiaire
+- **Streaming** de données : traiter au fur et à mesure plutôt que tout charger
+- **Pagination paresseuse** : on demande la page suivante uniquement quand on en a besoin
+- **Algorithmes complexes** (parcours d'arbre, génération de combinaisons) plus lisibles

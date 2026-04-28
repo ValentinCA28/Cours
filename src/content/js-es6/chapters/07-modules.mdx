@@ -1,0 +1,248 @@
+---
+number: "07"
+title: "Modules (import / export)"
+subtitle: "Organiser le code en fichiers réutilisables."
+---
+
+## Pourquoi des modules ?
+
+Quand un projet grossit, mettre tout dans un seul fichier devient ingérable. Les **modules ES6** permettent de :
+
+- **Découper** ton code en fichiers logiques (un fichier = un module)
+- **Réutiliser** des fonctions et des classes entre fichiers
+- **Cacher** ce qui est interne au module et n'**exposer** que ce qui est utile
+- Éviter les **collisions** de noms entre fichiers
+
+Chaque fichier `.js` est un module isolé : ses variables ne polluent pas le scope global. Pour partager quelque chose, tu dois explicitement l'**exporter**, et l'autre fichier doit l'**importer**.
+
+## Named exports
+
+Tu peux exporter **plusieurs valeurs nommées** depuis un même fichier.
+
+### Export inline
+
+Préfixe directement la déclaration avec <InlineCode>export</InlineCode>.
+
+```js
+// math.js
+export const PI = 3.14159;
+
+export function add(a, b) {
+  return a + b;
+}
+
+export function multiply(a, b) {
+  return a * b;
+}
+
+export class Vector {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+}
+```
+
+### Export en bloc (à la fin du fichier)
+
+Souvent plus clair : on définit tout en haut, on exporte en bas.
+
+```js
+// math.js
+const PI = 3.14159;
+
+function add(a, b) {
+  return a + b;
+}
+
+function multiply(a, b) {
+  return a * b;
+}
+
+// Liste de tout ce qu'on expose
+export { PI, add, multiply };
+```
+
+## Default export
+
+Chaque module peut avoir **un seul** export par défaut. C'est utile pour exporter une "chose principale" : une classe, une fonction unique, une config...
+
+```js
+// User.js
+export default class User {
+  constructor(name) {
+    this.name = name;
+  }
+}
+```
+
+Ou pour une fonction :
+
+```js
+// greet.js
+export default function greet(name) {
+  return `Bonjour ${name}`;
+}
+```
+
+Tu peux **combiner** un default export et des named exports dans le même fichier :
+
+```js
+// api.js
+export default function fetchUser(id) {
+  return fetch(`/api/users/${id}`);
+}
+
+export const API_URL = "https://example.com";
+export function fetchPosts() { /* ... */ }
+```
+
+## Named imports
+
+Pour utiliser ce qu'un module exporte, tu utilises <InlineCode>import</InlineCode>. Les noms doivent **correspondre exactement** aux exports.
+
+```js
+// app.js
+import { add, multiply, PI } from "./math.js";
+
+console.log(add(2, 3));       // 5
+console.log(multiply(4, 5));  // 20
+console.log(PI);              // 3.14159
+```
+
+### Renommage avec `as`
+
+Si un nom rentre en conflit avec une variable locale, tu peux le **renommer** à l'import.
+
+```js
+// app.js
+import { add as sum, multiply as mul } from "./math.js";
+
+console.log(sum(2, 3));   // 5
+console.log(mul(4, 5));   // 20
+```
+
+C'est aussi utile quand deux modules exportent un nom identique.
+
+```js
+import { format as formatDate } from "./date.js";
+import { format as formatPrice } from "./currency.js";
+```
+
+## Default import
+
+Pour importer un default export, **pas d'accolades** — et tu choisis librement le nom.
+
+```js
+// app.js
+import User from "./User.js";        // nom libre
+import Person from "./User.js";      // ça marche aussi
+import greet from "./greet.js";
+
+const u = new User("Alice");
+console.log(greet("Bob"));
+```
+
+### Combiner default et named
+
+Même ligne, default d'abord, puis named entre accolades.
+
+```js
+// app.js
+import fetchUser, { API_URL, fetchPosts } from "./api.js";
+
+console.log(API_URL);
+fetchUser(1);
+fetchPosts();
+```
+
+<Callout variant="info" title="Default vs named">
+  - **Named export** : le nom est imposé par le module (ou renommé avec <InlineCode>as</InlineCode>). Plusieurs par fichier. Pratique pour les bibliothèques avec beaucoup d'helpers.
+  - **Default export** : un seul par fichier. Le nom à l'import est libre. Pratique pour la "chose principale" du module (classe, composant, fonction).
+  - **Convention** : préférer les named exports — ils rendent le refactoring et l'auto-complétion plus fiables.
+</Callout>
+
+## Import namespace avec `*`
+
+Si tu veux **tout** importer d'un coup et accéder aux exports comme propriétés d'un objet :
+
+```js
+// app.js
+import * as Math from "./math.js";
+
+console.log(Math.PI);              // 3.14159
+console.log(Math.add(2, 3));       // 5
+console.log(Math.multiply(4, 5));  // 20
+```
+
+Le nom <InlineCode>Math</InlineCode> est libre, c'est juste un namespace local. <InlineCode>* as</InlineCode> n'inclut **pas** le default export sous le nom `default` directement — il y est accessible via <InlineCode>Math.default</InlineCode>.
+
+C'est utile pour :
+- Les modules avec beaucoup d'exports
+- Quand tu veux préfixer pour la lisibilité (<InlineCode>Math.add</InlineCode> est plus clair que <InlineCode>add</InlineCode> seul)
+
+## Import dynamique
+
+Les imports classiques sont **statiques** : ils sont exécutés au chargement du module. Mais on peut aussi **importer dynamiquement** un module à la demande, en cours d'exécution.
+
+```js
+// Chargement à la demande (renvoie une Promise)
+async function loadEditor() {
+  const module = await import("./heavy-editor.js");
+  module.init();
+}
+
+// Au clic, on charge l'éditeur seulement si nécessaire
+button.addEventListener("click", loadEditor);
+```
+
+L'import dynamique :
+
+- Renvoie une **Promise** qui résout vers l'objet du module
+- Permet le **code splitting** (le bundle reste léger, le code est chargé à la demande)
+- Accepte des chemins **calculés** (variables) : <InlineCode>{"await import(`./locale-${lang}.js`)"}</InlineCode>
+
+```js
+// Avec destructuring
+const { default: User, API_URL } = await import("./api.js");
+```
+
+C'est très utilisé en React (lazy loading des routes), pour les plugins, ou pour les fonctionnalités optionnelles.
+
+## Re-export
+
+Un module peut **réexporter** ce qu'il a importé d'un autre module. Pratique pour créer un fichier "index" qui regroupe une API.
+
+```js
+// utils/index.js
+export { add, multiply } from "./math.js";
+export { format } from "./date.js";
+export { default as User } from "./User.js";
+
+// Ailleurs dans le projet :
+// import { add, format, User } from "./utils/index.js";
+```
+
+## Récapitulatif
+
+| Syntaxe | Description |
+|---|---|
+| `export const x = ...` | Named export inline |
+| `export { a, b }` | Named export en bloc |
+| `export default ...` | Default export (un seul par module) |
+| `import { a, b } from "..."` | Named imports |
+| `import { a as x } from "..."` | Named import avec renommage |
+| `import X from "..."` | Default import (nom libre) |
+| `import X, { a } from "..."` | Default + named en même temps |
+| `import * as M from "..."` | Tout importer comme namespace |
+| `await import("...")` | Import dynamique (Promise) |
+
+## Bonnes pratiques
+
+- **Un fichier = une responsabilité** : ne mets pas dix classes sans rapport dans le même module
+- **Préfère les named exports** : meilleur refactoring, meilleure auto-complétion
+- **Default export pour la "chose principale"** : une classe, un composant React, une fonction utilitaire centrale
+- **Pas d'effet de bord à l'import** : un module ne devrait pas faire de requête HTTP ou modifier le DOM juste en étant importé
+- **Chemins relatifs** : <InlineCode>./</InlineCode> et <InlineCode>../</InlineCode> pour tes propres fichiers, nom direct pour les packages npm
+
+Les modules ES6 sont la **base** de tout projet JavaScript moderne : Node.js, navigateurs, bundlers (Vite, Webpack, esbuild)... tous les supportent nativement aujourd'hui. Tu n'auras quasiment plus jamais à écrire de <InlineCode>require()</InlineCode> ou de <InlineCode>module.exports</InlineCode> dans un projet récent.

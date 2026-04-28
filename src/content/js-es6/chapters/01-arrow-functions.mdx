@@ -1,0 +1,175 @@
+---
+number: "01"
+title: "Arrow Functions"
+subtitle: "Syntaxe concise et lexical this."
+---
+
+## Une nouvelle façon d'écrire des fonctions
+
+Les **arrow functions** (fonctions fléchées) sont l'une des nouveautés les plus visibles d'ES6. Elles offrent deux avantages majeurs par rapport aux fonctions classiques :
+
+- Une **syntaxe plus concise**, idéale pour les callbacks.
+- Un comportement **lexical** pour le mot-clé <InlineCode>this</InlineCode>, qui résout un piège bien connu de JavaScript.
+
+## Syntaxe complète
+
+La forme la plus proche d'une fonction classique : parenthèses autour des paramètres, accolades autour du corps, et un <InlineCode>return</InlineCode> explicite.
+
+```js
+// Fonction classique
+function add(a, b) {
+  return a + b;
+}
+
+// Arrow function équivalente
+const add = (a, b) => {
+  return a + b;
+};
+
+console.log(add(2, 3)); // 5
+```
+
+<ExerciseById id="01-arrow-basic" />
+
+## Retour implicite
+
+Quand le corps de la fonction tient sur **une seule expression**, tu peux retirer les accolades **et** le <InlineCode>return</InlineCode>. La valeur de l'expression est retournée automatiquement.
+
+```js
+// Avec accolades + return
+const square = (n) => {
+  return n * n;
+};
+
+// Retour implicite : plus court, plus lisible
+const square = (n) => n * n;
+
+console.log(square(5)); // 25
+```
+
+<ExerciseById id="01-arrow-implicit" />
+
+## Un seul paramètre
+
+Quand la fonction n'a **qu'un seul paramètre**, les parenthèses deviennent optionnelles :
+
+```js
+// Avec parenthèses
+const double = (n) => n * 2;
+
+// Sans parenthèses (équivalent)
+const double = n => n * 2;
+```
+
+Note : certains linters (ex: Prettier) imposent de toujours mettre les parenthèses pour rester cohérent. Suis la convention de ton équipe.
+
+## Aucun paramètre
+
+S'il n'y a aucun paramètre, les parenthèses sont **obligatoires** :
+
+```js
+const greet = () => "Bonjour !";
+
+console.log(greet()); // "Bonjour !"
+```
+
+## Retourner un objet littéral
+
+Piège classique : si tu veux retourner un objet en retour implicite, le moteur confond les <InlineCode>{</InlineCode> avec un bloc de code. Solution : entourer l'objet de **parenthèses**.
+
+```js
+// FAUX : { name: "Alice" } est interprété comme un bloc
+const makeUser = (name) => { name: name };
+console.log(makeUser("Alice")); // undefined
+
+// CORRECT : on entoure l'objet de parenthèses
+const makeUser = (name) => ({ name: name });
+console.log(makeUser("Alice")); // { name: "Alice" }
+```
+
+## Lexical `this`
+
+C'est **la** raison principale d'utiliser les arrow functions. Une fonction classique crée son propre <InlineCode>this</InlineCode>, qui dépend de la façon dont elle est appelée. Une arrow function, elle, **hérite du `this` du contexte parent**.
+
+```js
+class Timer {
+  constructor() {
+    this.seconds = 0;
+  }
+
+  start() {
+    // Fonction classique : this est redéfini, pointe vers undefined
+    setInterval(function () {
+      this.seconds++;            // TypeError : this is undefined
+      console.log(this.seconds);
+    }, 1000);
+  }
+
+  startFixed() {
+    // Arrow function : this hérité du contexte de startFixed (l'instance)
+    setInterval(() => {
+      this.seconds++;
+      console.log(this.seconds); // 1, 2, 3...
+    }, 1000);
+  }
+}
+```
+
+Avant ES6, on utilisait des hacks comme <InlineCode>const self = this</InlineCode> ou <InlineCode>.bind(this)</InlineCode>. Les arrow functions rendent ces astuces obsolètes.
+
+## Avec map, filter, reduce
+
+Les arrow functions brillent particulièrement avec les méthodes fonctionnelles des tableaux. Le code devient plus court et plus expressif.
+
+```js
+const numbers = [1, 2, 3, 4, 5];
+
+// Map : transformer chaque élément
+const doubled = numbers.map(n => n * 2);
+console.log(doubled); // [2, 4, 6, 8, 10]
+
+// Filter : garder les éléments qui satisfont une condition
+const evens = numbers.filter(n => n % 2 === 0);
+console.log(evens); // [2, 4]
+
+// Reduce : agréger en une seule valeur
+const sum = numbers.reduce((acc, n) => acc + n, 0);
+console.log(sum); // 15
+
+// Chaînage : doubler puis sommer les pairs
+const total = numbers
+  .filter(n => n % 2 === 0)
+  .map(n => n * 2)
+  .reduce((acc, n) => acc + n, 0);
+console.log(total); // 12
+```
+
+<ExerciseById id="01-arrow-map" />
+
+## Quand NE PAS utiliser les arrows
+
+<Callout variant="warn" title="Quand NE PAS utiliser les arrows">
+  Les arrow functions ne conviennent **pas** dans ces trois cas :
+
+  - **Méthodes d'objet** : <InlineCode>this</InlineCode> ne pointe pas vers l'objet, mais vers le scope englobant. Utilise la syntaxe courte <InlineCode>{ method() {} }</InlineCode>.
+  - **Constructeurs** : une arrow function ne peut pas être appelée avec <InlineCode>new</InlineCode>. Utilise <InlineCode>function</InlineCode> ou <InlineCode>class</InlineCode>.
+  - **Event listeners DOM** où tu veux accéder à <InlineCode>this</InlineCode> (l'élément cible) : <InlineCode>this</InlineCode> sera hérité au lieu d'être l'élément. Utilise une fonction classique ou <InlineCode>event.currentTarget</InlineCode>.
+</Callout>
+
+```js
+// MAUVAIS : this dans une méthode d'objet
+const user = {
+  name: "Alice",
+  greet: () => `Bonjour ${this.name}` // this n'est pas user
+};
+
+// BON : syntaxe courte de méthode
+const user = {
+  name: "Alice",
+  greet() {
+    return `Bonjour ${this.name}`;
+  }
+};
+```
+
+En résumé : les arrows sont parfaites pour les **callbacks** courts et les fonctions utilitaires, mais réserve les fonctions classiques pour les méthodes et les constructeurs.

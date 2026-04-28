@@ -1,0 +1,194 @@
+---
+number: "05"
+title: "Template Literals"
+subtitle: "Strings interpolées et multi-lignes avec les backticks."
+---
+
+## Une nouvelle façon d'écrire les strings
+
+ES6 introduit les **template literals**, une syntaxe alternative aux strings classiques. Au lieu d'utiliser des guillemets simples <InlineCode>'..'</InlineCode> ou doubles <InlineCode>".."</InlineCode>, on utilise des **backticks** <InlineCode>`..`</InlineCode>.
+
+Cette syntaxe apporte trois super-pouvoirs :
+
+1. **Interpolation** d'expressions JavaScript directement dans la string
+2. **Multi-lignes** sans avoir à écrire <InlineCode>\n</InlineCode>
+3. **Tagged templates** pour transformer la string avec une fonction
+
+```js
+const name = "Alice";
+const greeting = `Bonjour ${name} !`;
+console.log(greeting); // "Bonjour Alice !"
+```
+
+## Interpolation avec `${ }`
+
+Tout ce qui est entre <InlineCode>${"{"}...{"}"}</InlineCode> est évalué comme du JavaScript, puis converti en string.
+
+### Variables simples
+
+```js
+const product = "café";
+const price = 2.5;
+
+const message = `Le ${product} coûte ${price} €`;
+console.log(message); // "Le café coûte 2.5 €"
+```
+
+### Expressions et calculs
+
+On peut mettre **n'importe quelle expression** : opérations, appels de fonctions, ternaires...
+
+```js
+const a = 5;
+const b = 3;
+
+console.log(`${a} + ${b} = ${a + b}`); // "5 + 3 = 8"
+console.log(`Le double de ${a} est ${a * 2}`); // "Le double de 5 est 10"
+
+// Appel de fonction
+const name = "alice";
+console.log(`Bonjour ${name.toUpperCase()}`); // "Bonjour ALICE"
+```
+
+### Ternaires et logique
+
+```js
+const age = 17;
+const message = `Tu es ${age >= 18 ? "majeur" : "mineur"}`;
+console.log(message); // "Tu es mineur"
+
+const user = { name: "Alice", premium: true };
+const label = `${user.name} (${user.premium ? "Pro" : "Gratuit"})`;
+console.log(label); // "Alice (Pro)"
+```
+
+<ExerciseById id="05-template-basic" />
+
+## Strings multi-lignes
+
+Avec les guillemets classiques, écrire un texte sur plusieurs lignes oblige à utiliser <InlineCode>\n</InlineCode> ou à concaténer.
+
+```js
+// Avant ES6 — pénible
+const html = "<div>\n" +
+             "  <h1>Titre</h1>\n" +
+             "  <p>Contenu</p>\n" +
+             "</div>";
+```
+
+Avec les template literals, **les retours à la ligne sont conservés tels quels** :
+
+```js
+const html = `<div>
+  <h1>Titre</h1>
+  <p>Contenu</p>
+</div>`;
+
+console.log(html);
+// <div>
+//   <h1>Titre</h1>
+//   <p>Contenu</p>
+// </div>
+```
+
+C'est particulièrement pratique pour générer du HTML, des emails, des messages d'erreur, du SQL...
+
+```js
+const name = "Alice";
+const items = ["pommes", "pain", "café"];
+
+const email = `Bonjour ${name},
+
+Voici ta liste de courses :
+- ${items.join("\n- ")}
+
+À bientôt !`;
+```
+
+<ExerciseById id="05-template-multiline" />
+
+<Callout variant="info" title="Différence avec '..' et &quot;..&quot;">
+  Les guillemets simples et doubles sont **équivalents** en JS et créent une string "plate". Les backticks créent un **template literal** qui supporte l'interpolation et les retours à la ligne. Pour insérer un backtick dans un template literal, échappe-le avec <InlineCode>{"\\`"}</InlineCode>.
+</Callout>
+
+## Imbrication
+
+Tu peux **imbriquer** des template literals dans une interpolation. C'est utile pour la composition.
+
+```js
+const items = ["pomme", "poire"];
+
+const html = `<ul>
+  ${items.map((item) => `<li>${item}</li>`).join("")}
+</ul>`;
+
+console.log(html);
+// <ul>
+//   <li>pomme</li><li>poire</li>
+// </ul>
+```
+
+## Tagged templates <Badge>avancé</Badge>
+
+Une fonctionnalité plus rare mais puissante : on peut **préfixer** un template literal par une fonction. Cette fonction reçoit les morceaux de string et les valeurs interpolées séparément, et peut les transformer.
+
+### Syntaxe générale
+
+```js
+function tag(strings, ...values) {
+  // strings : tableau des morceaux entre les ${}
+  // values  : tableau des expressions interpolées
+  console.log(strings);
+  console.log(values);
+}
+
+const name = "Alice";
+const age = 28;
+
+tag`Bonjour ${name}, tu as ${age} ans !`;
+// strings : ["Bonjour ", ", tu as ", " ans !"]
+// values  : ["Alice", 28]
+```
+
+### Exemple : highlight des valeurs
+
+Une utilisation classique : entourer chaque valeur de balises <InlineCode>&lt;mark&gt;</InlineCode> pour la mettre en évidence.
+
+```js
+function highlight(strings, ...values) {
+  return strings.reduce((result, str, i) => {
+    const value = values[i] !== undefined ? `<mark>${values[i]}</mark>` : "";
+    return result + str + value;
+  }, "");
+}
+
+const name = "Alice";
+const score = 95;
+
+const html = highlight`L'utilisateur ${name} a obtenu ${score} points.`;
+console.log(html);
+// "L'utilisateur <mark>Alice</mark> a obtenu <mark>95</mark> points."
+```
+
+### Cas d'usage réels
+
+Les tagged templates sont utilisés par plusieurs librairies populaires :
+
+- **styled-components** (React) : <InlineCode>styled.div`color: red;`</InlineCode>
+- **graphql-tag** : <InlineCode>gql`query {{ "{ users { id } }" }}`</InlineCode>
+- **dedent** : enlever l'indentation commune
+- **Internationalisation** : traduire dynamiquement
+
+Tu n'as pas besoin de les écrire toi-même au début, mais c'est utile de comprendre la syntaxe quand tu en croiseras dans du code.
+
+## Récapitulatif
+
+| Fonctionnalité | Syntaxe |
+|---|---|
+| Interpolation | `` `Bonjour ${name}` `` |
+| Multi-ligne | Retours à la ligne directs dans les backticks |
+| Expression | `` `Total : ${price * quantity} €` `` |
+| Ternaire | `` `${age >= 18 ? "ok" : "ko"}` `` |
+| Tagged template | `` myTag`...${value}...` `` |
+
+Les template literals sont la **manière standard** d'écrire des strings dynamiques en JavaScript moderne. Elles remplacent quasi systématiquement la concaténation avec <InlineCode>+</InlineCode>, qui devient illisible dès qu'on a plus de deux variables.

@@ -1,0 +1,134 @@
+---
+number: "02"
+title: "Default Parameters"
+subtitle: "Valeurs par défaut pour les paramètres de fonction."
+---
+
+## Le problème avant ES6
+
+Avant ES6, donner une valeur par défaut à un paramètre obligeait à écrire un boilerplate verbeux dans le corps de la fonction :
+
+```js
+// Pré-ES6 : on vérifie manuellement avec ||
+function greet(name) {
+  name = name || "inconnu";
+  return "Bonjour " + name;
+}
+
+greet();         // "Bonjour inconnu"
+greet("Alice");  // "Bonjour Alice"
+```
+
+Cette technique a un défaut subtil : si tu passes une valeur "fausse" comme <InlineCode>0</InlineCode>, <InlineCode>""</InlineCode> ou <InlineCode>false</InlineCode>, elle est remplacée par la valeur par défaut, ce qui est rarement ce que tu veux.
+
+## La syntaxe ES6
+
+ES6 introduit une syntaxe dédiée : tu poses la valeur par défaut **directement dans la signature** de la fonction.
+
+```js
+function greet(name = "inconnu") {
+  return `Bonjour ${name}`;
+}
+
+greet();         // "Bonjour inconnu"
+greet("Alice");  // "Bonjour Alice"
+```
+
+C'est plus court, plus lisible, et ça marche aussi avec les arrow functions :
+
+```js
+const greet = (name = "inconnu") => `Bonjour ${name}`;
+```
+
+<ExerciseById id="02-default-greet" />
+
+## Expressions comme valeur par défaut
+
+La valeur par défaut n'est pas limitée à une constante. Tu peux y mettre **n'importe quelle expression**, évaluée à chaque appel où le paramètre est absent.
+
+```js
+// Appel d'une fonction
+function getRandomId() {
+  return Math.floor(Math.random() * 1000);
+}
+
+function createUser(name, id = getRandomId()) {
+  return { name, id };
+}
+
+createUser("Alice"); // { name: "Alice", id: 742 }
+createUser("Bob");   // { name: "Bob", id: 91 }
+
+// Date courante
+function logEvent(message, time = new Date()) {
+  console.log(`[${time.toISOString()}] ${message}`);
+}
+```
+
+## Utiliser les paramètres précédents
+
+Une valeur par défaut peut faire référence à un paramètre **déclaré avant elle** dans la liste :
+
+```js
+function multiply(a, b = a * 2) {
+  return a * b;
+}
+
+multiply(5);    // 5 * 10 = 50  (b vaut a * 2 = 10)
+multiply(5, 3); // 5 * 3 = 15
+```
+
+L'inverse n'est pas possible : un paramètre ne peut pas dépendre d'un paramètre déclaré **après** lui.
+
+<ExerciseById id="02-default-multiply" />
+
+## ⚠️ undefined vs null
+
+C'est le piège à connaître. La valeur par défaut s'applique uniquement si le paramètre vaut <InlineCode>undefined</InlineCode>. Passer <InlineCode>null</InlineCode> **ne déclenche pas** le default :
+
+```js
+function greet(name = "inconnu") {
+  return `Bonjour ${name}`;
+}
+
+greet();           // "Bonjour inconnu"
+greet(undefined);  // "Bonjour inconnu" — undefined explicite : default appliqué
+greet(null);       // "Bonjour null"   — null : pris tel quel !
+greet("");         // "Bonjour "       — chaîne vide : prise telle quelle
+greet(0);          // "Bonjour 0"      — 0 : pris tel quel
+```
+
+<Callout variant="info" title="Pourquoi cette distinction ?">
+  En JavaScript, <InlineCode>undefined</InlineCode> signifie *"absence de valeur"* (le paramètre n'a pas été passé), tandis que <InlineCode>null</InlineCode> signifie *"absence intentionnelle"* (le développeur a explicitement mis "rien"). Les paramètres par défaut respectent cette nuance : ils ne se déclenchent que pour <InlineCode>undefined</InlineCode>, jamais pour <InlineCode>null</InlineCode>.
+</Callout>
+
+Cette règle est aussi valable pour le **destructuring**, que tu verras plus loin.
+
+## Cas pratique
+
+Les default parameters sont parfaits pour rendre une API plus tolérante sans alourdir le code :
+
+```js
+function fetchData(url, options = {}) {
+  const method = options.method || "GET";
+  const timeout = options.timeout || 5000;
+  // ...
+}
+
+fetchData("/api/users");
+fetchData("/api/users", { method: "POST" });
+fetchData("/api/users", { method: "POST", timeout: 10000 });
+```
+
+Tu peux même combiner avec le destructuring pour aller plus loin :
+
+```js
+function fetchData(url, { method = "GET", timeout = 5000 } = {}) {
+  // method et timeout sont garantis
+}
+
+fetchData("/api/users");                // method = "GET", timeout = 5000
+fetchData("/api/users", { method: "POST" }); // method = "POST", timeout = 5000
+```
+
+Le <InlineCode>= {}</InlineCode> à la fin garantit qu'on peut destructurer même si on n'appelle pas la fonction avec un objet.

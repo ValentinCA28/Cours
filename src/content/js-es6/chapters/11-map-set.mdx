@@ -1,0 +1,198 @@
+---
+number: "11"
+title: "Map & Set"
+subtitle: "Structures de données modernes : clé-valeur et valeurs uniques."
+---
+
+## `Map` — la collection clé-valeur
+
+Avant ES6, on utilisait des objets <InlineCode>{}</InlineCode> comme dictionnaires clé-valeur. Le souci : les clés d'un objet sont **toujours** converties en chaînes, et il n'y a pas de méthode propre pour connaître la taille ou itérer dans l'ordre d'insertion.
+
+<InlineCode>Map</InlineCode> corrige tout ça : les clés peuvent être de **n'importe quel type** (objet, fonction, nombre, string, etc.), l'ordre d'insertion est préservé, et l'API est explicite.
+
+```js
+const stock = new Map();
+
+stock.set("pomme", 12);
+stock.set("banane", 7);
+stock.set("kiwi", 23);
+
+console.log(stock.get("banane")); // 7
+console.log(stock.size);           // 3
+```
+
+### L'API de Map
+
+```js
+const m = new Map();
+
+m.set(key, value);  // Ajoute ou met à jour
+m.get(key);         // Récupère la valeur (ou undefined)
+m.has(key);         // Booléen : la clé existe-t-elle ?
+m.delete(key);      // Supprime, retourne true/false
+m.clear();          // Vide tout
+m.size;             // Nombre d'entrées (propriété, pas méthode)
+```
+
+### Des clés de tout type
+
+C'est la grande force de <InlineCode>Map</InlineCode> par rapport à un objet plain.
+
+```js
+const userRoles = new Map();
+
+const alice = { id: 1, name: "Alice" };
+const bob = { id: 2, name: "Bob" };
+
+// Utiliser des objets comme clés
+userRoles.set(alice, "admin");
+userRoles.set(bob, "user");
+
+console.log(userRoles.get(alice)); // "admin"
+
+// Même les nombres restent des nombres (pas de conversion en string)
+const m = new Map();
+m.set(1, "un");
+m.set("1", "un (string)");
+console.log(m.size); // 2 — clés distinctes !
+```
+
+### Initialiser depuis un tableau de paires
+
+Tu peux passer un tableau de paires <InlineCode>[key, value]</InlineCode> au constructeur.
+
+```js
+const fruits = new Map([
+  ["pomme", 12],
+  ["banane", 7],
+  ["kiwi", 23],
+]);
+```
+
+### Itérer sur une Map
+
+<InlineCode>Map</InlineCode> est iterable. <InlineCode>for...of</InlineCode> renvoie des paires <InlineCode>[key, value]</InlineCode> qu'on peut destructurer.
+
+```js
+for (const [fruit, qty] of stock) {
+  console.log(`${fruit} : ${qty}`);
+}
+
+// Méthodes spécialisées
+for (const key of stock.keys())   { /* ... */ }
+for (const val of stock.values()) { /* ... */ }
+for (const [k, v] of stock.entries()) { /* ... */ } // Identique à for...of stock
+```
+
+<ExerciseById id="11-map-basic" />
+
+## `Set` — collection de valeurs uniques
+
+Un <InlineCode>Set</InlineCode> stocke des **valeurs uniques** (pas de doublons). L'ajout d'une valeur déjà présente est simplement ignoré.
+
+```js
+const tags = new Set();
+
+tags.add("js");
+tags.add("html");
+tags.add("js"); // Ignoré — déjà présent
+
+console.log(tags.size);       // 2
+console.log(tags.has("js"));  // true
+console.log(tags.has("css")); // false
+```
+
+### L'API de Set
+
+```js
+const s = new Set();
+
+s.add(value);    // Ajoute (ignore si déjà présent)
+s.has(value);    // Booléen
+s.delete(value); // Supprime, retourne true/false
+s.clear();       // Vide tout
+s.size;          // Nombre de valeurs
+```
+
+### Initialiser depuis un iterable
+
+```js
+// Depuis un tableau
+const tags = new Set(["js", "html", "css"]);
+
+// Depuis une string : chaque caractère devient une valeur unique
+const letters = new Set("abracadabra");
+console.log(letters); // Set(5) { "a", "b", "r", "c", "d" }
+```
+
+### Astuce — déduplication d'un tableau
+
+C'est l'usage le plus courant en pratique : enlever les doublons d'un tableau en une ligne.
+
+```js
+const arr = [1, 2, 2, 3, 4, 4, 5];
+const unique = [...new Set(arr)];
+console.log(unique); // [1, 2, 3, 4, 5]
+```
+
+<ExerciseById id="11-set-dedup" />
+
+### Opérations ensemblistes
+
+ES2025 a introduit des méthodes natives pour les opérations ensemblistes. Avant ça, on les écrivait à la main, et c'est encore ce qu'on voit dans la plupart du code existant.
+
+```js
+const a = new Set([1, 2, 3, 4]);
+const b = new Set([3, 4, 5, 6]);
+
+// Union — toutes les valeurs des deux sets
+const union = new Set([...a, ...b]);
+// Set(6) { 1, 2, 3, 4, 5, 6 }
+
+// Intersection — valeurs présentes dans les deux
+const intersection = new Set([...a].filter((x) => b.has(x)));
+// Set(2) { 3, 4 }
+
+// Différence — dans a mais pas dans b
+const difference = new Set([...a].filter((x) => !b.has(x)));
+// Set(2) { 1, 2 }
+
+// Versions natives (ES2025) — plus propres si dispo
+// a.union(b)
+// a.intersection(b)
+// a.difference(b)
+```
+
+### Itérer sur un Set
+
+```js
+const tags = new Set(["js", "html", "css"]);
+
+for (const tag of tags) {
+  console.log(tag);
+}
+
+// forEach existe aussi (pour la cohérence avec Map et Array)
+tags.forEach((tag) => console.log(tag));
+```
+
+<Callout variant="success" title="Map vs Object — quand utiliser quoi ?">
+  Utilise **Map** quand :
+  <br />— Tes clés ne sont pas des strings (objets, nombres distincts de strings, etc.).
+  <br />— Tu ajoutes/supprimes souvent des entrées (Map est optimisé pour ça).
+  <br />— Tu as besoin de la taille (<InlineCode>.size</InlineCode>) ou d'itérer dans l'ordre d'insertion.
+  <br /><br />
+  Utilise un **objet plain** <InlineCode>{}</InlineCode> quand :
+  <br />— Tu manipules une structure type "enregistrement" avec des clés string fixes.
+  <br />— Tu sérialises en JSON (<InlineCode>JSON.stringify</InlineCode> ne sait pas gérer une Map directement).
+  <br />— Tu travailles avec une API qui attend un objet (props React, options de fonction…).
+</Callout>
+
+## Récapitulatif
+
+| Structure | Pour quoi ? | Clés / Valeurs |
+|---|---|---|
+| <InlineCode>Object</InlineCode> | Enregistrement structuré, JSON | Clés string/symbol |
+| <InlineCode>Map</InlineCode> | Dictionnaire dynamique | Clés de **tout** type |
+| <InlineCode>Array</InlineCode> | Liste ordonnée, doublons OK | Index numériques |
+| <InlineCode>Set</InlineCode> | Collection de valeurs **uniques** | Pas de clé, juste des valeurs |

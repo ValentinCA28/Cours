@@ -1,0 +1,154 @@
+---
+number: "03"
+title: "Rest & Spread"
+subtitle: "Le même opérateur ... avec deux rôles opposés."
+---
+
+## Un opérateur, deux rôles
+
+ES6 introduit l'opérateur <InlineCode>...</InlineCode> (trois petits points). Il peut sembler déroutant car il a **deux rôles opposés** selon le contexte :
+
+- **Rest** : il **regroupe** plusieurs valeurs dans un tableau ou un objet.
+- **Spread** : il **étale** un itérable (tableau, objet, string) en éléments individuels.
+
+La syntaxe est identique. Pour les distinguer, retiens cette règle simple : *si tu vois <InlineCode>...</InlineCode> dans une **définition** (paramètre de fonction, destructuring), c'est **rest**. Si tu le vois dans un **appel** ou un **littéral**, c'est **spread**.*
+
+## REST : regrouper les arguments
+
+Dans une signature de fonction, <InlineCode>...nums</InlineCode> capture **tous les arguments restants** sous forme de tableau. C'est l'équivalent moderne et propre de l'ancien objet <InlineCode>arguments</InlineCode>.
+
+```js
+function sum(...nums) {
+  // nums est un vrai tableau, pas un objet arguments
+  return nums.reduce((acc, n) => acc + n, 0);
+}
+
+sum(1, 2);          // 3
+sum(1, 2, 3, 4, 5); // 15
+sum();              // 0
+```
+
+Tu peux combiner des paramètres normaux avec un rest, à condition que le rest soit **toujours en dernier** :
+
+```js
+function logEvent(level, ...messages) {
+  messages.forEach(msg => console.log(`[${level}] ${msg}`));
+}
+
+logEvent("INFO", "Server started", "Port 3000", "Ready");
+// [INFO] Server started
+// [INFO] Port 3000
+// [INFO] Ready
+```
+
+Le rest fonctionne aussi en **destructuring** :
+
+```js
+const [first, ...others] = [1, 2, 3, 4, 5];
+console.log(first);  // 1
+console.log(others); // [2, 3, 4, 5]
+
+const { name, ...rest } = { name: "Alice", age: 25, city: "Paris" };
+console.log(name); // "Alice"
+console.log(rest); // { age: 25, city: "Paris" }
+```
+
+<ExerciseById id="03-rest-sum" />
+
+## SPREAD : étaler un itérable
+
+Dans un appel de fonction ou un littéral (tableau/objet), <InlineCode>...arr</InlineCode> **développe** chaque élément à la position où il apparaît.
+
+### Étaler un tableau dans un appel
+
+```js
+const numbers = [3, 1, 4, 1, 5, 9, 2, 6];
+
+// Avant ES6 : Math.max ne prend pas un tableau
+Math.max(numbers);            // NaN
+Math.max.apply(null, numbers); // 9 (mais verbeux)
+
+// Avec spread : élégant
+Math.max(...numbers); // 9
+```
+
+### Copier un tableau
+
+```js
+const original = [1, 2, 3];
+const copy = [...original];
+
+copy.push(4);
+console.log(original); // [1, 2, 3] — non modifié
+console.log(copy);     // [1, 2, 3, 4]
+```
+
+C'est une **copie superficielle** (shallow). Les objets imbriqués sont partagés par référence.
+
+### Fusionner des tableaux
+
+```js
+const a = [1, 2, 3];
+const b = [4, 5, 6];
+
+const merged = [...a, ...b];
+console.log(merged); // [1, 2, 3, 4, 5, 6]
+
+// Insertion à n'importe quelle position
+const withZero = [0, ...a, 99, ...b];
+console.log(withZero); // [0, 1, 2, 3, 99, 4, 5, 6]
+```
+
+### Spread d'objet
+
+ES2018 (peu après ES6) a étendu le spread aux objets :
+
+```js
+const user = { name: "Alice", age: 25 };
+const updated = { ...user, age: 26, email: "alice@example.com" };
+
+console.log(updated);
+// { name: "Alice", age: 26, email: "alice@example.com" }
+```
+
+Les propriétés écrites **après** le spread écrasent celles du spread. C'est très utilisé en React/Redux pour mettre à jour un état immutablement.
+
+```js
+// Pattern classique : merger un objet sans muter l'original
+const baseConfig = { theme: "dark", lang: "fr", debug: false };
+const userConfig = { lang: "en", debug: true };
+
+const finalConfig = { ...baseConfig, ...userConfig };
+// { theme: "dark", lang: "en", debug: true }
+```
+
+<ExerciseById id="03-spread-merge" />
+
+## Étaler une string
+
+Une chaîne de caractères est itérable, donc spread fonctionne dessus :
+
+```js
+const letters = [..."hello"];
+console.log(letters); // ["h", "e", "l", "l", "o"]
+```
+
+## Récap : Rest vs Spread
+
+<Callout variant="success" title="Différence clé">
+  - **Rest** : on **regroupe** plusieurs valeurs en une. Apparaît dans une **définition** (paramètre de fonction, motif de destructuring). Toujours **en dernier**.
+  - **Spread** : on **étale** une valeur en plusieurs. Apparaît dans un **appel** de fonction ou un **littéral** (tableau, objet). Peut apparaître **n'importe où**.
+
+  Mnémotechnique : *Rest collecte, Spread distribue*.
+</Callout>
+
+| Situation | Rôle | Exemple |
+|---|---|---|
+| `function f(...args)` | Rest | Regroupe les args |
+| `f(...args)` | Spread | Étale les args |
+| `const [a, ...rest] = arr` | Rest | Regroupe la fin du tableau |
+| `const newArr = [...arr]` | Spread | Étale les éléments |
+| `const { a, ...rest } = obj` | Rest | Regroupe les autres clés |
+| `const newObj = { ...obj }` | Spread | Étale les propriétés |
+
+Une fois que tu as cette grille en tête, l'opérateur <InlineCode>...</InlineCode> devient l'un des outils les plus puissants et les plus utilisés du JavaScript moderne.

@@ -1,12 +1,14 @@
 "use client";
 
 import jsDomExercises from "@/content/js-dom/exercises";
+import jsEs6Exercises from "@/content/js-es6/exercises";
 import pythonSsrExercises from "@/content/python-server-side-rendering/exercises";
 import CodeExercise from "./CodeExercise";
 import PythonExercise from "./PythonExercise";
 
 const allExercises: Record<string, Record<string, any>> = {
   "js-dom": jsDomExercises,
+  "js-es6": jsEs6Exercises,
   "python-server-side-rendering": pythonSsrExercises,
 };
 

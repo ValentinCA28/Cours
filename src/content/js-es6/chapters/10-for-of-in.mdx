@@ -1,0 +1,139 @@
+---
+number: "10"
+title: "for...of & for...in"
+subtitle: "Les boucles modernes pour itérables et objets."
+---
+
+## `for...of` — itérer sur les valeurs
+
+<InlineCode>for...of</InlineCode> parcourt les **valeurs** d'un objet **iterable**. Il fonctionne avec tout ce qui respecte le protocole iterable : <InlineCode>Array</InlineCode>, <InlineCode>String</InlineCode>, <InlineCode>Map</InlineCode>, <InlineCode>Set</InlineCode>, <InlineCode>NodeList</InlineCode>, generators, etc.
+
+```js
+// Sur un Array : on récupère les valeurs
+const fruits = ["pomme", "banane", "kiwi"];
+for (const fruit of fruits) {
+  console.log(fruit); // "pomme", "banane", "kiwi"
+}
+
+// Sur une String : on récupère les caractères
+for (const char of "ABC") {
+  console.log(char); // "A", "B", "C"
+}
+
+// Sur un Set : on récupère les valeurs uniques
+const tags = new Set(["js", "html", "css"]);
+for (const tag of tags) {
+  console.log(tag);
+}
+
+// Sur une NodeList (DOM)
+document.querySelectorAll("li").forEach; // forEach existe
+for (const li of document.querySelectorAll("li")) {
+  console.log(li.textContent);
+}
+```
+
+### Avoir l'index en même temps
+
+<InlineCode>Array.prototype.entries()</InlineCode> retourne un iterable de paires <InlineCode>[index, value]</InlineCode>, parfait à destructurer.
+
+```js
+const fruits = ["pomme", "banane", "kiwi"];
+
+for (const [i, fruit] of fruits.entries()) {
+  console.log(`${i} : ${fruit}`);
+  // 0 : pomme
+  // 1 : banane
+  // 2 : kiwi
+}
+```
+
+<ExerciseById id="10-for-of" />
+
+## `for...in` — itérer sur les clés d'un objet
+
+<InlineCode>for...in</InlineCode> parcourt les **clés** (propriétés énumérables) d'un objet, **y compris celles héritées via le prototype**. C'est sa principale différence — et son piège.
+
+```js
+const user = {
+  name: "Alice",
+  age: 30,
+  city: "Paris",
+};
+
+for (const key in user) {
+  console.log(`${key} = ${user[key]}`);
+  // name = Alice
+  // age = 30
+  // city = Paris
+}
+```
+
+### Filtrer les propriétés héritées
+
+Si tu veux seulement les propriétés **propres** à l'objet (pas celles du prototype), utilise <InlineCode>Object.hasOwn</InlineCode> (ES2022) ou <InlineCode>hasOwnProperty</InlineCode>.
+
+```js
+for (const key in user) {
+  if (Object.hasOwn(user, key)) {
+    console.log(key, user[key]);
+  }
+}
+```
+
+### Alternatives plus sûres
+
+En pratique, on préfère souvent <InlineCode>Object.keys</InlineCode>, <InlineCode>Object.values</InlineCode> ou <InlineCode>Object.entries</InlineCode> qui ne renvoient **que** les propriétés propres et énumérables.
+
+```js
+const user = { name: "Alice", age: 30, city: "Paris" };
+
+// Les clés
+Object.keys(user);    // ["name", "age", "city"]
+
+// Les valeurs
+Object.values(user);  // ["Alice", 30, "Paris"]
+
+// Les paires [clé, valeur]
+Object.entries(user); // [["name", "Alice"], ["age", 30], ["city", "Paris"]]
+
+// Très pratique combiné à for...of
+for (const [key, value] of Object.entries(user)) {
+  console.log(`${key} : ${value}`);
+}
+```
+
+<ExerciseById id="10-for-in" />
+
+## Tableau comparatif
+
+| Boucle | Itère sur | Fonctionne avec | break / continue |
+|---|---|---|---|
+| <InlineCode>for</InlineCode> classique | Indices manuels | Tout (via index) | Oui |
+| <InlineCode>for...of</InlineCode> | **Valeurs** | Iterables (Array, String, Map, Set, NodeList, generator) | Oui |
+| <InlineCode>for...in</InlineCode> | **Clés** | Objets (inclut les clés héritées) | Oui |
+| <InlineCode>forEach</InlineCode> | Valeurs (+ index en 2e arg) | Array, Map, Set, NodeList | **Non** (utilise <InlineCode>some</InlineCode> ou <InlineCode>every</InlineCode>) |
+
+<Callout variant="warn" title="Ne pas utiliser for...in sur un Array">
+  <InlineCode>for...in</InlineCode> sur un tableau peut sembler fonctionner, mais c'est une **mauvaise pratique** :
+  <br />— L'ordre n'est pas garanti (alors que les indices d'un tableau sont ordonnés).
+  <br />— Il itère aussi sur les **propriétés ajoutées** au tableau (ex: <InlineCode>arr.foo = "bar"</InlineCode>) et celles du prototype.
+  <br />Pour un tableau, utilise toujours <InlineCode>for...of</InlineCode>, <InlineCode>forEach</InlineCode>, ou <InlineCode>for</InlineCode> classique.
+</Callout>
+
+```js
+const arr = ["a", "b", "c"];
+arr.foo = "oups";
+
+// for...in : surprise !
+for (const k in arr) console.log(k); // "0", "1", "2", "foo"
+
+// for...of : propre
+for (const v of arr) console.log(v); // "a", "b", "c"
+```
+
+## En résumé
+
+- **for...of** → tu veux les **valeurs** d'un iterable (le cas le plus fréquent).
+- **for...in** → tu veux les **clés** d'un objet (et seulement d'un objet plain).
+- **Object.entries() + for...of** → meilleur des deux mondes pour les objets.

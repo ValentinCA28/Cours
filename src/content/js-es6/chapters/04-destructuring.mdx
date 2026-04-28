@@ -1,0 +1,237 @@
+---
+number: "04"
+title: "Destructuring"
+subtitle: "Extraire des valeurs d'objets et de tableaux en une ligne."
+---
+
+## Pourquoi le destructuring ?
+
+Avant ES6, extraire des valeurs depuis un objet ou un tableau demandait plusieurs lignes répétitives. Le **destructuring** (ou *décomposition*) permet de récupérer plusieurs propriétés ou éléments d'un coup, dans des variables nommées, le tout en **une seule ligne**.
+
+```js
+// Avant ES6
+const user = { name: "Alice", age: 28 };
+const name = user.name;
+const age = user.age;
+
+// Avec destructuring
+const { name, age } = user;
+console.log(name, age); // "Alice" 28
+```
+
+## Destructuring d'objet
+
+### Extraction simple
+
+Les noms des variables doivent correspondre **exactement** aux clés de l'objet.
+
+```js
+const user = { name: "Alice", age: 28, city: "Paris" };
+
+// On extrait name et city, on ignore age
+const { name, city } = user;
+console.log(name); // "Alice"
+console.log(city); // "Paris"
+```
+
+### Renommer une propriété
+
+Si tu veux donner un autre nom à la variable, utilise la syntaxe <InlineCode>cle: nouveauNom</InlineCode>.
+
+```js
+const user = { name: "Alice", age: 28 };
+
+// On renomme name en userName
+const { name: userName, age: userAge } = user;
+console.log(userName); // "Alice"
+console.log(userAge);  // 28
+```
+
+### Valeurs par défaut
+
+Si la propriété est <InlineCode>undefined</InlineCode>, la valeur par défaut prend le relais.
+
+```js
+const user = { name: "Alice" };
+
+// age n'existe pas dans user → valeur par défaut 18
+const { name, age = 18 } = user;
+console.log(name); // "Alice"
+console.log(age);  // 18
+```
+
+Tu peux **combiner renommage et valeur par défaut** :
+
+```js
+const config = { theme: "dark" };
+
+const { theme: appTheme = "light", lang: appLang = "fr" } = config;
+console.log(appTheme); // "dark"
+console.log(appLang);  // "fr"
+```
+
+### Destructuring imbriqué (nested)
+
+On peut plonger dans la structure d'un objet.
+
+```js
+const user = {
+  name: "Alice",
+  address: {
+    city: "Paris",
+    zip: "75001",
+  },
+};
+
+// On extrait directement city dans l'objet imbriqué address
+const { address: { city, zip } } = user;
+console.log(city); // "Paris"
+console.log(zip);  // "75001"
+```
+
+<Callout variant="warn" title="Attention">
+  Avec le nested destructuring, <InlineCode>address</InlineCode> n'est **pas** créé comme variable. Seules <InlineCode>city</InlineCode> et <InlineCode>zip</InlineCode> existent.
+</Callout>
+
+<ExerciseById id="04-destruct-obj" />
+
+## Destructuring de tableau
+
+L'ordre est important : la première variable reçoit le premier élément, la deuxième le deuxième, etc.
+
+```js
+const colors = ["red", "green", "blue"];
+
+const [first, second, third] = colors;
+console.log(first);  // "red"
+console.log(second); // "green"
+console.log(third);  // "blue"
+```
+
+### Skip — sauter des éléments
+
+Utilise une virgule sans nom pour ignorer un élément.
+
+```js
+const colors = ["red", "green", "blue", "yellow"];
+
+// On saute green et yellow
+const [first, , third] = colors;
+console.log(first); // "red"
+console.log(third); // "blue"
+```
+
+### Rest avec `...`
+
+L'opérateur **rest** récupère "tout ce qui reste" dans un tableau.
+
+```js
+const numbers = [1, 2, 3, 4, 5];
+
+const [head, ...tail] = numbers;
+console.log(head); // 1
+console.log(tail); // [2, 3, 4, 5]
+```
+
+### Valeurs par défaut
+
+Comme pour les objets, on peut donner une valeur par défaut.
+
+```js
+const colors = ["red"];
+
+const [first, second = "white"] = colors;
+console.log(first);  // "red"
+console.log(second); // "white"
+```
+
+<ExerciseById id="04-destruct-array" />
+
+## Le swap classique
+
+Échanger deux variables sans variable temporaire est devenu un **one-liner** grâce au destructuring de tableau.
+
+```js
+let a = 1;
+let b = 2;
+
+// Swap en une ligne
+[a, b] = [b, a];
+
+console.log(a); // 2
+console.log(b); // 1
+```
+
+C'est plus lisible et plus court que la version classique avec variable temporaire :
+
+```js
+// Ancienne méthode
+let a = 1;
+let b = 2;
+let temp = a;
+a = b;
+b = temp;
+```
+
+## Destructuring dans les paramètres de fonction
+
+C'est l'un des usages les plus puissants : on **destructure directement dans la signature** de la fonction.
+
+```js
+// Sans destructuring
+function greet(user) {
+  console.log("Bonjour " + user.name + ", tu as " + user.age + " ans");
+}
+
+// Avec destructuring dans les paramètres
+function greet({ name, age }) {
+  console.log("Bonjour " + name + ", tu as " + age + " ans");
+}
+
+greet({ name: "Alice", age: 28 });
+```
+
+Tu peux aussi utiliser des **valeurs par défaut** dans les paramètres :
+
+```js
+function createUser({ name, role = "user", active = true } = {}) {
+  return { name, role, active };
+}
+
+console.log(createUser({ name: "Alice" }));
+// { name: "Alice", role: "user", active: true }
+
+console.log(createUser());
+// { name: undefined, role: "user", active: true }
+```
+
+<Callout variant="info" title="Astuce">
+  Le <InlineCode>= {}</InlineCode> à la fin permet d'appeler la fonction **sans argument** sans planter. Sans ça, <InlineCode>createUser()</InlineCode> jetterait une erreur car on essaierait de destructurer <InlineCode>undefined</InlineCode>.
+</Callout>
+
+Le destructuring fonctionne aussi avec les paramètres en tableau :
+
+```js
+function firstAndLast([first, ...rest]) {
+  const last = rest[rest.length - 1];
+  return [first, last];
+}
+
+console.log(firstAndLast([1, 2, 3, 4, 5])); // [1, 5]
+```
+
+<ExerciseById id="04-destruct-params" />
+
+## Récapitulatif
+
+| Syntaxe | Description |
+|---|---|
+| `const { a, b } = obj` | Extrait `a` et `b` depuis l'objet |
+| `const { a: x } = obj` | Extrait `a` et le renomme `x` |
+| `const { a = 10 } = obj` | Valeur par défaut si `a` est undefined |
+| `const [a, b] = arr` | Extrait les 2 premiers éléments |
+| `const [, , c] = arr` | Saute les 2 premiers, prend le 3ème |
+| `const [a, ...rest] = arr` | `a` = premier, `rest` = le reste en tableau |
+| `function f({ a, b }) {}` | Destructuring dans les paramètres |
+
+Le destructuring est partout dans le JavaScript moderne : React props, retours de hooks, configuration, imports... Maîtrise-le bien, il va devenir un réflexe.

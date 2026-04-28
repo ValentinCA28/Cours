@@ -1,0 +1,245 @@
+---
+number: "06"
+title: "Classes"
+subtitle: "Sucre syntaxique sur les prototypes : héritage, statique, getters."
+---
+
+## Du prototype à `class`
+
+Avant ES6, créer un "type" d'objet avec des méthodes partagées passait par les **fonctions constructeur** et les **prototypes** :
+
+```js
+// Avant ES6 — verbeux
+function Animal(name) {
+  this.name = name;
+}
+
+Animal.prototype.speak = function () {
+  console.log(this.name + " fait du bruit");
+};
+
+const cat = new Animal("Chat");
+cat.speak();
+```
+
+ES6 introduit le mot-clé <InlineCode>class</InlineCode>, beaucoup plus lisible. **Attention** : c'est purement du **sucre syntaxique** au-dessus du système de prototypes existant. Sous le capot, JavaScript continue à utiliser les prototypes — la classe est simplement une syntaxe plus agréable pour les manipuler.
+
+```js
+// Avec ES6 — propre
+class Animal {
+  constructor(name) {
+    this.name = name;
+  }
+
+  speak() {
+    console.log(`${this.name} fait du bruit`);
+  }
+}
+
+const cat = new Animal("Chat");
+cat.speak(); // "Chat fait du bruit"
+```
+
+## Squelette complet d'une classe
+
+Voici un exemple regroupant les principales fonctionnalités :
+
+```js
+class User {
+  // Champ privé (préfixé par #) — inaccessible depuis l'extérieur
+  #password;
+
+  // Champ public avec valeur par défaut
+  active = true;
+
+  // Le constructor est appelé avec `new User(...)`
+  constructor(name, password) {
+    this.name = name;
+    this.#password = password;
+  }
+
+  // Méthode d'instance
+  greet() {
+    return `Bonjour ${this.name}`;
+  }
+
+  // Getter — s'utilise sans parenthèses : user.displayName
+  get displayName() {
+    return this.name.toUpperCase();
+  }
+
+  // Setter — s'utilise avec une affectation : user.displayName = "..."
+  set displayName(value) {
+    this.name = value.toLowerCase();
+  }
+
+  // Méthode statique — appelée sur la classe, pas sur l'instance
+  static fromJSON(json) {
+    const data = JSON.parse(json);
+    return new User(data.name, data.password);
+  }
+
+  // Méthode publique qui utilise le champ privé
+  checkPassword(input) {
+    return this.#password === input;
+  }
+}
+
+const alice = new User("alice", "secret123");
+
+console.log(alice.greet());           // "Bonjour alice"
+console.log(alice.displayName);       // "ALICE" (getter)
+
+alice.displayName = "BOB";            // setter
+console.log(alice.name);              // "bob"
+
+console.log(alice.checkPassword("secret123")); // true
+// console.log(alice.#password);      // SyntaxError : champ privé
+
+// Méthode statique — sur la classe
+const bob = User.fromJSON('{"name":"bob","password":"abc"}');
+```
+
+### Détail des éléments
+
+- **`constructor`** : méthode spéciale appelée à la création de l'objet avec <InlineCode>new</InlineCode>
+- **Méthode** : fonction attachée au prototype, partagée par toutes les instances
+- **`get` / `set`** : permettent d'accéder à une propriété calculée comme à une propriété normale
+- **`static`** : la méthode appartient à la **classe** elle-même, pas aux instances
+- **Champ privé `#`** : seulement accessible dans la classe, lance une erreur de syntaxe sinon
+
+<ExerciseById id="06-class-basic" />
+
+## Héritage avec `extends`
+
+Une classe peut **hériter** d'une autre avec le mot-clé <InlineCode>extends</InlineCode>. Toutes les méthodes et propriétés de la classe parente sont disponibles dans la classe enfant.
+
+```js
+class Animal {
+  constructor(name) {
+    this.name = name;
+  }
+
+  speak() {
+    console.log(`${this.name} fait du bruit`);
+  }
+}
+
+// Dog hérite de tout ce qu'Animal possède
+class Dog extends Animal {
+  constructor(name, breed) {
+    super(name);     // Appelle le constructor d'Animal
+    this.breed = breed;
+  }
+
+  fetch() {
+    console.log(`${this.name} ramène la balle`);
+  }
+}
+
+const rex = new Dog("Rex", "Labrador");
+rex.speak(); // "Rex fait du bruit"  (héritée d'Animal)
+rex.fetch(); // "Rex ramène la balle" (propre à Dog)
+```
+
+### Le rôle de `super()`
+
+Dans le constructor d'une classe enfant, <InlineCode>super(...)</InlineCode> appelle le constructor de la classe parente. C'est lui qui se charge d'initialiser <InlineCode>this</InlineCode>.
+
+<Callout variant="warn" title="Règle absolue">
+  Dans une sous-classe, **tu dois appeler <InlineCode>super()</InlineCode> avant d'utiliser <InlineCode>this</InlineCode>** dans le constructor. Sinon JavaScript lance une <InlineCode>ReferenceError</InlineCode>. C'est <InlineCode>super()</InlineCode> qui crée et initialise <InlineCode>this</InlineCode> dans le contexte de la classe enfant.
+</Callout>
+
+```js
+class Dog extends Animal {
+  constructor(name, breed) {
+    // this.breed = breed;  // ❌ ReferenceError !
+    super(name);             // ✅ d'abord super()
+    this.breed = breed;      // ✅ puis on peut utiliser this
+  }
+}
+```
+
+## Override de méthodes
+
+Une classe enfant peut **redéfinir** (override) une méthode de la classe parente. La nouvelle version remplace l'ancienne pour les instances de la sous-classe.
+
+```js
+class Animal {
+  speak() {
+    console.log("Bruit générique d'animal");
+  }
+}
+
+class Cat extends Animal {
+  // On redéfinit speak()
+  speak() {
+    console.log("Miaou !");
+  }
+}
+
+class Dog extends Animal {
+  // On peut aussi appeler la version parente avec super
+  speak() {
+    super.speak();              // appelle Animal.speak()
+    console.log("Wouaf !");
+  }
+}
+
+new Animal().speak(); // "Bruit générique d'animal"
+new Cat().speak();    // "Miaou !"
+new Dog().speak();    // "Bruit générique d'animal"
+                      // "Wouaf !"
+```
+
+<InlineCode>super.method()</InlineCode> est très utile quand tu veux **étendre** le comportement de la méthode parente plutôt que de la remplacer complètement.
+
+<ExerciseById id="06-class-inherit" />
+
+## Quelques pièges classiques
+
+### `this` dans les méthodes
+
+Si tu détaches une méthode de son objet, <InlineCode>this</InlineCode> est perdu :
+
+```js
+class Counter {
+  count = 0;
+  increment() {
+    this.count++;
+  }
+}
+
+const c = new Counter();
+const inc = c.increment;
+// inc(); // ❌ TypeError : this est undefined
+
+// Solutions :
+const incBound = c.increment.bind(c);  // bind explicite
+const incArrow = () => c.increment();  // arrow function
+```
+
+### Les classes ne sont pas hoistées
+
+Contrairement aux fonctions, **on ne peut pas utiliser une classe avant sa déclaration** :
+
+```js
+// new Foo();   // ❌ ReferenceError
+class Foo {}
+new Foo();      // ✅
+```
+
+## Récapitulatif
+
+| Élément | Description |
+|---|---|
+| `class` | Déclare une classe |
+| `constructor` | Initialise une instance |
+| `extends` | Hérite d'une autre classe |
+| `super()` | Appelle le constructor parent (obligatoire avant `this`) |
+| `super.method()` | Appelle une méthode parente |
+| `static` | Méthode/propriété sur la classe, pas sur les instances |
+| `get` / `set` | Propriété calculée |
+| `#prop` | Champ privé (inaccessible de l'extérieur) |
+
+Les classes ES6 sont la **façon moderne** d'écrire de l'orienté objet en JavaScript. Elles sont utilisées dans la plupart des frameworks (React, Angular, Vue 2, Node.js, etc.) et restent compatibles avec tout le système de prototypes historique.
