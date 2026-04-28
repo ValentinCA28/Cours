@@ -75,7 +75,7 @@ console.log(greet()); // "Bonjour !"
 
 ## Retourner un objet littéral
 
-Piège classique : si tu veux retourner un objet en retour implicite, le moteur confond les <InlineCode>{</InlineCode> avec un bloc de code. Solution : entourer l'objet de **parenthèses**.
+Piège classique : si tu veux retourner un objet en retour implicite, le moteur confond les <InlineCode>{"{"}</InlineCode> avec un bloc de code. Solution : entourer l'objet de **parenthèses**.
 
 ```js
 // FAUX : { name: "Alice" } est interprété comme un bloc
@@ -151,7 +151,7 @@ console.log(total); // 12
 <Callout variant="warn" title="Quand NE PAS utiliser les arrows">
   Les arrow functions ne conviennent **pas** dans ces trois cas :
 
-  - **Méthodes d'objet** : <InlineCode>this</InlineCode> ne pointe pas vers l'objet, mais vers le scope englobant. Utilise la syntaxe courte <InlineCode>{ method() {} }</InlineCode>.
+  - **Méthodes d'objet** : <InlineCode>this</InlineCode> ne pointe pas vers l'objet, mais vers le scope englobant. Utilise la syntaxe courte <InlineCode>{"{ method() {} }"}</InlineCode>.
   - **Constructeurs** : une arrow function ne peut pas être appelée avec <InlineCode>new</InlineCode>. Utilise <InlineCode>function</InlineCode> ou <InlineCode>class</InlineCode>.
   - **Event listeners DOM** où tu veux accéder à <InlineCode>this</InlineCode> (l'élément cible) : <InlineCode>this</InlineCode> sera hérité au lieu d'être l'élément. Utilise une fonction classique ou <InlineCode>event.currentTarget</InlineCode>.
 </Callout>

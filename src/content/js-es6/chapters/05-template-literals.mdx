@@ -22,7 +22,7 @@ console.log(greeting); // "Bonjour Alice !"
 
 ## Interpolation avec `${ }`
 
-Tout ce qui est entre <InlineCode>${"{"}...{"}"}</InlineCode> est évalué comme du JavaScript, puis converti en string.
+Tout ce qui est entre <InlineCode>{"${...}"}</InlineCode> est évalué comme du JavaScript, puis converti en string.
 
 ### Variables simples
 
@@ -175,7 +175,7 @@ console.log(html);
 Les tagged templates sont utilisés par plusieurs librairies populaires :
 
 - **styled-components** (React) : <InlineCode>styled.div`color: red;`</InlineCode>
-- **graphql-tag** : <InlineCode>gql`query {{ "{ users { id } }" }}`</InlineCode>
+- **graphql-tag** : <InlineCode>{"gql`query { users { id } }`"}</InlineCode>
 - **dedent** : enlever l'indentation commune
 - **Internationalisation** : traduire dynamiquement
 

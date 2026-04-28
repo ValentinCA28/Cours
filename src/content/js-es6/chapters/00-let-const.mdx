@@ -8,7 +8,7 @@ subtitle: "Le scope de bloc et l'immutabilité des références."
 
 Avant ES6 (2015), JavaScript ne disposait que d'un seul moyen de déclarer une variable : le mot-clé <InlineCode>var</InlineCode>. Ce dernier souffre de plusieurs défauts qui rendent le code difficile à raisonner :
 
-- **Scope de fonction uniquement** : une variable déclarée avec <InlineCode>var</InlineCode> n'est pas limitée au bloc <InlineCode>{ ... }</InlineCode> dans lequel elle apparaît.
+- **Scope de fonction uniquement** : une variable déclarée avec <InlineCode>var</InlineCode> n'est pas limitée au bloc <InlineCode>{"{ ... }"}</InlineCode> dans lequel elle apparaît.
 - **Hoisting silencieux** : la déclaration est "remontée" en haut de la fonction, mais sa valeur reste <InlineCode>undefined</InlineCode> jusqu'à l'exécution réelle de la ligne.
 - **Redéclaration autorisée** : tu peux redéclarer la même variable plusieurs fois sans erreur, ce qui masque les bugs.
 

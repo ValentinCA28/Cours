@@ -132,7 +132,7 @@ console.log(users, posts, comments);
 
 ### `Promise.allSettled` — tolérant aux erreurs
 
-Attend que **toutes** les Promises soient settled (résolues ou rejetées) et retourne un tableau d'objets <InlineCode>{ status, value }</InlineCode> ou <InlineCode>{ status, reason }</InlineCode>. Aucune n'échoue jamais globalement.
+Attend que **toutes** les Promises soient settled (résolues ou rejetées) et retourne un tableau d'objets <InlineCode>{"{ status, value }"}</InlineCode> ou <InlineCode>{"{ status, reason }"}</InlineCode>. Aucune n'échoue jamais globalement.
 
 ```js
 const results = await Promise.allSettled([

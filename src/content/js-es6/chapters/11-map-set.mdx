@@ -6,7 +6,7 @@ subtitle: "Structures de données modernes : clé-valeur et valeurs uniques."
 
 ## `Map` — la collection clé-valeur
 
-Avant ES6, on utilisait des objets <InlineCode>{}</InlineCode> comme dictionnaires clé-valeur. Le souci : les clés d'un objet sont **toujours** converties en chaînes, et il n'y a pas de méthode propre pour connaître la taille ou itérer dans l'ordre d'insertion.
+Avant ES6, on utilisait des objets <InlineCode>{"{}"}</InlineCode> comme dictionnaires clé-valeur. Le souci : les clés d'un objet sont **toujours** converties en chaînes, et il n'y a pas de méthode propre pour connaître la taille ou itérer dans l'ordre d'insertion.
 
 <InlineCode>Map</InlineCode> corrige tout ça : les clés peuvent être de **n'importe quel type** (objet, fonction, nombre, string, etc.), l'ordre d'insertion est préservé, et l'API est explicite.
 
@@ -182,7 +182,7 @@ tags.forEach((tag) => console.log(tag));
   <br />— Tu ajoutes/supprimes souvent des entrées (Map est optimisé pour ça).
   <br />— Tu as besoin de la taille (<InlineCode>.size</InlineCode>) ou d'itérer dans l'ordre d'insertion.
   <br /><br />
-  Utilise un **objet plain** <InlineCode>{}</InlineCode> quand :
+  Utilise un **objet plain** <InlineCode>{"{}"}</InlineCode> quand :
   <br />— Tu manipules une structure type "enregistrement" avec des clés string fixes.
   <br />— Tu sérialises en JSON (<InlineCode>JSON.stringify</InlineCode> ne sait pas gérer une Map directement).
   <br />— Tu travailles avec une API qui attend un objet (props React, options de fonction…).
