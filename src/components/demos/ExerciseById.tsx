@@ -2,6 +2,7 @@
 
 import jsDomExercises from "@/content/js-dom/exercises";
 import jsEs6Exercises from "@/content/js-es6/exercises";
+import jsClassesMetaExercises from "@/content/js-classes-meta/exercises";
 import pythonSsrExercises from "@/content/python-server-side-rendering/exercises";
 import CodeExercise from "./CodeExercise";
 import PythonExercise from "./PythonExercise";
@@ -9,6 +10,7 @@ import PythonExercise from "./PythonExercise";
 const allExercises: Record<string, Record<string, any>> = {
   "js-dom": jsDomExercises,
   "js-es6": jsEs6Exercises,
+  "js-classes-meta": jsClassesMetaExercises,
   "python-server-side-rendering": pythonSsrExercises,
 };
 

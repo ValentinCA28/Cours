@@ -1,0 +1,171 @@
+---
+number: "09"
+title: "Symbol.species"
+subtitle: "Contrôler le constructeur retourné par map, filter, slice…"
+---
+
+Le clou du spectacle metaprogrammation. Quand tu fais <InlineCode>myArr.map(...)</InlineCode>, JS doit créer un nouveau tableau pour stocker le résultat. Mais quel constructeur utilise-t-il ? <InlineCode>Array</InlineCode> ? Ou la sous-classe de <InlineCode>myArr</InlineCode> ? La réponse dépend d'un symbol assez méconnu mais central : <InlineCode>Symbol.species</InlineCode>.
+
+## Le problème
+
+Si tu hérites d'<InlineCode>Array</InlineCode> ou de <InlineCode>Promise</InlineCode>, par défaut les méthodes comme <InlineCode>map</InlineCode>, <InlineCode>filter</InlineCode>, <InlineCode>slice</InlineCode>, <InlineCode>then</InlineCode> retournent une instance de **ta sous-classe**, pas de la classe parente.
+
+```js
+class MyArray extends Array {
+  // Pas de méthode override, juste un nom différent
+}
+
+const a = new MyArray(1, 2, 3);
+const mapped = a.map(x => x * 2);
+
+console.log(mapped instanceof MyArray); // true (par défaut)
+console.log(mapped instanceof Array);   // true aussi
+console.log(mapped); // MyArray(3) [2, 4, 6]
+```
+
+Souvent on **veut** ce comportement : la sous-classe propage son comportement sur les valeurs dérivées. Si tu écris une <InlineCode>SortedArray</InlineCode> qui maintient ses éléments triés, tu veux que <InlineCode>filter()</InlineCode> retourne aussi une <InlineCode>SortedArray</InlineCode>.
+
+Mais parfois c'est **exactement ce qu'on ne veut pas**. Imagine une <InlineCode>TimeoutPromise</InlineCode> qui rejette automatiquement après X millisecondes :
+
+```js
+class TimeoutPromise extends Promise {
+  // Imaginons que cette classe ajoute un timeout au constructor
+}
+
+const p = new TimeoutPromise((resolve) => {
+  setTimeout(resolve, 100);
+}, /* timeout */ 50);
+
+// Si .then() retourne aussi une TimeoutPromise...
+const next = p.then(value => value * 2);
+// ... alors le timeout se propage à TOUTE la chaîne de promises !
+// Chaque .then() relance un timeout. Catastrophe.
+```
+
+Tu ne veux **pas** que tous les <InlineCode>.then()</InlineCode> soient aussi des <InlineCode>TimeoutPromise</InlineCode>. Tu veux que la chaîne dérivée soit une <InlineCode>Promise</InlineCode> normale. C'est là que <InlineCode>Symbol.species</InlineCode> entre en jeu.
+
+## Symbol.species en action
+
+La solution : override le getter statique <InlineCode>Symbol.species</InlineCode> pour retourner le **constructeur** que les méthodes doivent utiliser pour créer de nouvelles instances.
+
+```js
+class MyArray extends Array {
+  // On dit aux méthodes héritées : "utilise Array, pas MyArray"
+  static get [Symbol.species]() {
+    return Array;
+  }
+}
+
+const a = new MyArray(1, 2, 3);
+const mapped = a.map(x => x * 2);
+
+console.log(mapped instanceof MyArray); // false ✅
+console.log(mapped instanceof Array);   // true
+```
+
+### Comment ça marche en interne
+
+C'est le détail qui fait toute la magie. <InlineCode>Array#map</InlineCode> ne fait **pas** ça :
+
+```js
+// ❌ Faux : un naïf ferait ça
+return new Array(...result);
+
+// ❌ Faux aussi : ce serait toujours la sous-classe
+return new this.constructor(...result);
+```
+
+Il fait en réalité :
+
+```js
+// ✅ Vrai code (simplifié) du moteur
+const Species = this.constructor[Symbol.species];
+return new Species(...result);
+```
+
+Par défaut, <InlineCode>Symbol.species</InlineCode> est défini sur <InlineCode>Array</InlineCode>, <InlineCode>Promise</InlineCode>, <InlineCode>Map</InlineCode>, <InlineCode>Set</InlineCode>, etc. comme un getter qui retourne <InlineCode>this</InlineCode>. Donc le constructeur courant. C'est ce qui fait qu'une sous-classe **propage son type par défaut**.
+
+```js
+// Comportement par défaut sur Array
+class DefaultArray extends Array {}
+// Équivalent à :
+// static get [Symbol.species]() { return this; }  // this === DefaultArray
+
+new DefaultArray(1, 2).map(x => x).constructor === DefaultArray; // true
+```
+
+En **overridant** <InlineCode>Symbol.species</InlineCode>, tu changes la fabrique. Tu dis : "quand tu dois créer une nouvelle instance dans une méthode héritée, utilise **ce** constructeur-là, pas moi".
+
+<ExerciseById id="09-species" />
+
+## Quand l'utiliser ?
+
+Quelques cas concrets où override <InlineCode>Symbol.species</InlineCode> est la bonne réponse :
+
+- **TimeoutPromise** : ses <InlineCode>.then()</InlineCode> doivent retourner des <InlineCode>Promise</InlineCode> normales pour ne pas propager le timeout à toute la chaîne.
+- **TypedArray** ou collection numérique customisée : pour que <InlineCode>.slice()</InlineCode> retourne un <InlineCode>Array</InlineCode> natif si tu sors du contexte typé.
+- **Collection custom** qui hérite d'<InlineCode>Array</InlineCode> mais dont tu ne veux **pas** propager le type — par exemple parce que les nouvelles instances violeraient un invariant de la sous-classe (un <InlineCode>SortedArray</InlineCode> dont les méthodes comme <InlineCode>map</InlineCode> peuvent produire un résultat non trié).
+
+À l'inverse, **NE PAS** utiliser quand la sous-classe n'apporte que des méthodes en plus, sans casser les invariants de la classe parente. Dans ce cas, le default qui retourne <InlineCode>this</InlineCode> est exactement ce qu'on veut : les valeurs dérivées gardent les méthodes utilitaires de la sous-classe.
+
+```js
+// Sous-classe qui ajoute juste des méthodes utiles
+class FancyArray extends Array {
+  sum() { return this.reduce((a, b) => a + b, 0); }
+  // PAS de Symbol.species override
+}
+
+const arr = new FancyArray(1, 2, 3);
+const filtered = arr.filter(x => x > 1);
+
+filtered.sum(); // 5 ✅ filtered est aussi une FancyArray
+```
+
+<Callout variant="info" title="Une décision de design">
+  La question à se poser : "Est-ce que mes invariants tiennent toujours dans les valeurs dérivées ?". Si oui → laisse le default. Si non → override <InlineCode>Symbol.species</InlineCode> pour retomber sur le constructeur parent.
+</Callout>
+
+## Récap metaprogramming
+
+Voilà le tableau récapitulatif de **tous** les well-known symbols vus dans le cours. Chacun est un point d'extension du langage : un endroit où JavaScript délègue à ton code une décision qu'il aurait sinon prise tout seul.
+
+| Symbol | Hook dans... |
+|---|---|
+| `Symbol.iterator` | `for...of`, spread, destructuring |
+| `Symbol.toPrimitive` | `+`, `-`, comparaison, conversion |
+| `Symbol.toStringTag` | `Object.prototype.toString` |
+| `Symbol.match` | `String#match` |
+| `Symbol.replace` | `String#replace` |
+| `Symbol.search` | `String#search` |
+| `Symbol.split` | `String#split` |
+| `Symbol.hasInstance` | `instanceof` |
+| `Symbol.isConcatSpreadable` | `Array#concat` |
+| `Symbol.unscopables` | `with` statement |
+| `Symbol.species` | `map`, `filter`, `slice`, `then` (sous-classes) |
+
+Vu de loin, on voit le pattern : **chaque opérateur ou méthode "magique" du langage a un symbol associé qui contrôle son comportement**. Override le symbol → tu override l'opération. C'est le cœur de la metaprogrammation côté objets.
+
+## Pour aller plus loin
+
+Tu as maintenant fait le tour des **well-known symbols**. C'est ce que les anglophones appellent souvent *reflection through implementation* : tu interviens dans le langage en implémentant les hooks qu'il appelle. Mais ce n'est qu'**une** des trois grandes voies de metaprogrammation en JavaScript moderne.
+
+- **<InlineCode>Reflect</InlineCode>** : un objet global qui expose une API dédiée pour faire de l'**introspection** : lire/écrire des propriétés, lister les clés, vérifier l'extensibilité d'un objet, etc. C'est l'équivalent moderne et propre de <InlineCode>Object.getPrototypeOf</InlineCode>, <InlineCode>delete</InlineCode>, <InlineCode>in</InlineCode>… mais sous forme de fonctions normales.
+
+- **<InlineCode>Proxy</InlineCode>** : un objet qui **intercepte** toutes les opérations effectuées sur un autre objet. Lecture, écriture, appel, <InlineCode>delete</InlineCode>, énumération… tu peux tout customiser via des "traps". C'est l'outil ultime de **intercession** : non plus implémenter des hooks ponctuels, mais reprendre le contrôle complet de la sémantique d'un objet.
+
+```js
+// Aperçu : un Proxy qui logge tous les accès
+const target = { name: "Alice" };
+const proxy = new Proxy(target, {
+  get(obj, prop) {
+    console.log(`Lecture de ${prop}`);
+    return obj[prop];
+  },
+});
+
+proxy.name; // logge "Lecture de name", retourne "Alice"
+```
+
+<Callout variant="success" title="Bravo">
+  Tu as terminé le parcours **Classes avancées & Metaprogrammation**. Tu sais désormais comment JavaScript orchestre le comportement de ses propres opérateurs et méthodes — et comment t'y greffer pour faire évoluer le langage de l'intérieur. Les patterns vus ici (well-known symbols, override de méthodes statiques, getters de species) sont **largement utilisés** dans les bibliothèques modernes, les frameworks réactifs (Vue, MobX, Solid) et les runtimes JS (Node, Bun, Deno).
+</Callout>

@@ -1,0 +1,56 @@
+---
+number: "00"
+title: "Introduction"
+subtitle: "Au-delà des bases : classes avancées et metaprogrammation."
+---
+
+## Pourquoi ce cours ?
+
+Tu as déjà manipulé les **classes ES6** : tu sais déclarer un <InlineCode>constructor</InlineCode>, ajouter des méthodes, hériter avec <InlineCode>extends</InlineCode>, appeler <InlineCode>super()</InlineCode>, écrire des getters/setters et même utiliser le préfixe <InlineCode>#</InlineCode> pour les champs privés. Bravo, c'est solide. Mais ce n'est qu'une partie de l'histoire.
+
+Une fois ces bases acquises, tu vas tomber sur des comportements qui surprennent :
+
+- Pourquoi <InlineCode>this</InlineCode> vaut-il <InlineCode>undefined</InlineCode> quand on détache une méthode ?
+- Dans quel ordre exact JavaScript évalue-t-il une déclaration de classe ?
+- Comment un objet décide-t-il **comment** il se comporte avec <InlineCode>for...of</InlineCode>, <InlineCode>JSON.stringify</InlineCode>, ou la coercition vers <InlineCode>String</InlineCode> ?
+- Peut-on rendre un <InlineCode>instanceof</InlineCode> personnalisé ?
+
+La réponse à toutes ces questions, c'est : **JavaScript expose des points d'extension internes**, et tu peux y brancher du code. C'est ce qu'on appelle la **metaprogrammation**.
+
+<Callout variant="info" title="Ce cours suppose acquis">
+  Les bases ES6 sur les classes : <InlineCode>class</InlineCode>, <InlineCode>constructor</InlineCode>, <InlineCode>extends</InlineCode>, <InlineCode>super</InlineCode>, getters/setters, méthodes statiques, champs privés <InlineCode>#</InlineCode>. Si ces termes te disent vaguement quelque chose mais que tu n'es pas à l'aise, repasse d'abord par le cours **JS ES6** (chapitre 6).
+</Callout>
+
+## C'est quoi la metaprogrammation ?
+
+La **metaprogrammation**, c'est écrire du code qui **inspecte** ou **modifie** le comportement du langage lui-même. Au lieu d'écrire des fonctions qui agissent sur des données, tu écris des fonctions qui agissent sur **le mécanisme d'exécution** de JavaScript.
+
+En JavaScript, il y a trois grandes voies pour faire de la metaprogrammation :
+
+1. **Symbols** — Des clés spéciales (comme <InlineCode>Symbol.iterator</InlineCode>, <InlineCode>Symbol.toPrimitive</InlineCode>) qui servent de "hooks" sur des opérations internes du langage. En implémentant un symbol bien-connu, tu personnalises ce que ton objet fait quand il rencontre <InlineCode>for...of</InlineCode>, <InlineCode>+</InlineCode>, <InlineCode>instanceof</InlineCode>, etc.
+2. **Reflect** — Un objet global qui expose les opérations internes (<InlineCode>get</InlineCode>, <InlineCode>set</InlineCode>, <InlineCode>has</InlineCode>, <InlineCode>deleteProperty</InlineCode>...) sous forme de méthodes appelables. Pratique pour faire de l'introspection propre.
+3. **Proxy** — Un wrapper qui **intercepte** les opérations sur un objet (lecture, écriture, énumération...) pour exécuter ton propre code à la place. C'est l'outil le plus puissant — et le plus avancé.
+
+Ce cours se concentre sur la première voie : **les Symbols**. C'est le sujet le plus immédiatement utile au quotidien, et il forme la base conceptuelle pour comprendre Reflect et Proxy plus tard.
+
+<Callout variant="success" title="Symbols = hooks du langage">
+  Les Symbols bien-connus (<InlineCode>well-known symbols</InlineCode>) sont les **points d'extension officiels** du runtime JavaScript. Les implémenter, c'est dire à JavaScript : "Voici comment mon objet répond à cette opération interne".
+</Callout>
+
+## Plan du cours
+
+Voici les 9 chapitres techniques qui suivent. On commence par approfondir les classes elles-mêmes avant de plonger dans les Symbols.
+
+- **01 — Classes en profondeur** <Badge>fondamentaux</Badge> Class expressions, strict mode automatique, ordre d'évaluation, absence de hoisting. Les détails subtils que tu rencontreras forcément.
+- **02 — Public & private** <Badge>fondamentaux</Badge> Champs publics, champs privés <InlineCode>#</InlineCode>, méthodes privées, statiques privés. La vraie encapsulation moderne.
+- **03 — Static blocks** <Badge>ES2022</Badge> Les blocs d'initialisation statique : exécuter du code complexe au moment de la définition de la classe.
+- **04 — Symbols : les bases** <Badge>metaprogrammation</Badge> Le type <InlineCode>symbol</InlineCode>, sa création, son unicité, son rôle de "clé invisible" pour les propriétés.
+- **05 — Symbol.iterator** <Badge>well-known</Badge> Rendre un objet iterable. Le hook qui fait fonctionner <InlineCode>for...of</InlineCode> et le spread.
+- **06 — Symbol.asyncIterator** <Badge>well-known</Badge> La version asynchrone : itérer sur des données qui arrivent au fil du temps avec <InlineCode>for await...of</InlineCode>.
+- **07 — Symbol.toPrimitive** <Badge>well-known</Badge> Personnaliser comment ton objet se convertit en nombre ou en string lors d'une coercition.
+- **08 — Symbol.hasInstance & Symbol.toStringTag** <Badge>well-known</Badge> Reprogrammer <InlineCode>instanceof</InlineCode> et personnaliser <InlineCode>Object.prototype.toString.call(obj)</InlineCode>.
+- **09 — Récap & patterns** <Badge>synthèse</Badge> Mise en perspective, anti-patterns à éviter, et quand utiliser tout ça (et quand surtout ne pas le faire).
+
+À la fin de ce cours, tu pourras lire du code de bibliothèque standard (RxJS, Immutable.js...) sans paniquer devant un <InlineCode>[Symbol.iterator]</InlineCode>, et tu sauras concevoir tes propres types qui s'intègrent **naturellement** au langage.
+
+Allez, on y va.

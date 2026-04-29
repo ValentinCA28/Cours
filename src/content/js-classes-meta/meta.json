@@ -1,0 +1,6 @@
+{
+  "title": "JavaScript : Classes Avancées & Metaprogrammation",
+  "description": "Pousse les classes ES6 au niveau pro et apprends à hooker dans le moteur JavaScript avec les Symbols : for...of custom, instanceof, coercion, Symbol.species et plus.",
+  "icon": "🔮",
+  "color": "#a855f7"
+}

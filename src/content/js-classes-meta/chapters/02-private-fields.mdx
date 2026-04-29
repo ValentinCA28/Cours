@@ -1,0 +1,182 @@
+---
+number: "02"
+title: "Public & private"
+subtitle: "Champs publics, champs privés, méthodes privées."
+---
+
+## Public class fields
+
+Avant ES2022, la seule façon "propre" d'attacher des propriétés à une instance était de les initialiser dans le <InlineCode>constructor</InlineCode> :
+
+```js
+// Avant ES2022
+class Rectangle {
+  constructor(h, w) {
+    this.height = h;
+    this.width = w;
+    this.color = "black"; // valeur par défaut perdue dans le constructor
+  }
+}
+```
+
+Avec **les public class fields**, tu peux déclarer les propriétés directement dans le corps de la classe, avec ou sans valeur par défaut :
+
+```js
+class Rectangle {
+  height = 0;       // valeur par défaut explicite
+  width;            // déclaré, mais undefined par défaut
+  color = "black";  // valeur par défaut
+
+  constructor(h, w) {
+    this.height = h;
+    this.width = w;
+  }
+}
+
+const r = new Rectangle(10, 5);
+console.log(r); // Rectangle { height: 10, width: 5, color: "black" }
+```
+
+### Pourquoi c'est mieux
+
+- **Self-documenting** : la liste des propriétés est visible en haut de la classe, sans avoir à scruter le constructor.
+- **Toujours présent** : même si le constructor est complexe ou conditionnel, le field est créé sur l'instance.
+- **Optimisations moteur** : V8 et SpiderMonkey peuvent créer des "shapes" plus stables, ce qui accélère l'accès aux propriétés.
+- **Couple bien avec TypeScript** : les types s'écrivent naturellement à côté de la déclaration.
+
+<Callout variant="info" title="Quand utiliser le constructor encore ?">
+  Le constructor reste indispensable quand l'initialisation **dépend d'arguments** (<InlineCode>this.height = h</InlineCode>) ou nécessite une **logique** (validation, transformation). Les class fields sont parfaits pour les valeurs par défaut **statiques**.
+</Callout>
+
+<ExerciseById id="02-public-field" />
+
+## Private fields avec #
+
+Le préfixe <InlineCode>#</InlineCode> rend un field **strictement privé** : impossible d'y accéder depuis l'extérieur de la classe. Pas via <InlineCode>obj.#foo</InlineCode> ailleurs, pas via <InlineCode>Object.keys</InlineCode>, pas via la console du navigateur. C'est de la **vraie encapsulation**.
+
+```js
+class Wallet {
+  #balance = 0;
+
+  deposit(amount) {
+    this.#balance += amount;
+  }
+
+  withdraw(amount) {
+    if (amount > this.#balance) throw new Error("Insufficient funds");
+    this.#balance -= amount;
+  }
+
+  get total() {
+    return this.#balance;
+  }
+}
+
+const w = new Wallet();
+w.deposit(100);
+console.log(w.total); // 100
+
+// w.#balance;        // ❌ SyntaxError: Private field '#balance' must be declared in an enclosing class
+// w["#balance"];     // ❌ undefined (le # fait partie du nom, pas un accès string)
+```
+
+### Quelques règles à retenir
+
+- Le <InlineCode>#</InlineCode> fait partie du **nom complet** du field. Tu écris donc <InlineCode>this.#balance</InlineCode> partout, et tu **dois le déclarer** en haut de la classe (sinon erreur de syntaxe).
+- Tu ne peux pas accéder à un private field via <InlineCode>this["#balance"]</InlineCode>, ce n'est pas une string.
+- Une tentative d'accès depuis l'extérieur lance une <InlineCode>SyntaxError</InlineCode> à l'analyse — pas un <InlineCode>undefined</InlineCode> silencieux. C'est plus sûr.
+
+### Différence avec la convention `_underscore`
+
+Avant ES2022, on préfixait les "privés" par un <InlineCode>_</InlineCode> (<InlineCode>this._balance</InlineCode>). C'était purement une **convention sociale** : rien n'empêchait d'y accéder de l'extérieur.
+
+```js
+class FakePrivate {
+  constructor() {
+    this._balance = 0; // "privé par politesse"
+  }
+}
+
+const f = new FakePrivate();
+f._balance = 9999; // ✅ ça marche, hélas
+```
+
+Les <InlineCode>#fields</InlineCode> apportent une **vraie barrière**, contrôlée par le moteur JavaScript.
+
+<Callout variant="info" title="Et les Symbols comme clés ?">
+  On verra les Symbols dans les chapitres suivants. Une propriété avec une clé Symbol est **discrète** mais **récupérable** via <InlineCode>Object.getOwnPropertySymbols(obj)</InlineCode>. Les <InlineCode>#fields</InlineCode>, eux, sont **vraiment** inaccessibles depuis l'extérieur — aucune API ne les expose.
+</Callout>
+
+<ExerciseById id="02-private-field" />
+
+## Méthodes et accessors privés
+
+Le préfixe <InlineCode>#</InlineCode> ne se limite pas aux fields. Tu peux aussi rendre privés :
+
+- des **méthodes d'instance**
+- des **getters** et **setters**
+- des **static fields** et **static methods**
+
+```js
+class Calculator {
+  x = 0;
+
+  // Méthode privée
+  #double(n) {
+    return n * 2;
+  }
+
+  // Getter privé
+  get #half() {
+    return this.x / 2;
+  }
+
+  // Setter privé
+  set #reset(_) {
+    this.x = 0;
+  }
+
+  // Static privé : on les appelle avec ClassName.#name (ou this.#name dans une static)
+  static #counter = 0;
+  static #nextId() {
+    return ++Calculator.#counter;
+  }
+
+  // API publique
+  run(n) {
+    this.x = this.#double(n);
+    const id = Calculator.#nextId();
+    return { id, value: this.x, half: this.#half };
+  }
+}
+
+const c = new Calculator();
+console.log(c.run(5));  // { id: 1, value: 10, half: 5 }
+console.log(c.run(7));  // { id: 2, value: 14, half: 7 }
+
+// c.#double(3);              // ❌ SyntaxError
+// Calculator.#nextId();      // ❌ SyntaxError
+```
+
+C'est exactement la même règle que pour les fields : le <InlineCode>#</InlineCode> fait partie du nom, et l'accès n'est autorisé **que depuis l'intérieur de la classe**.
+
+<Callout variant="success" title="Vraie API publique vs implementation">
+  Les méthodes privées te permettent de **factoriser** la logique interne d'une classe (helpers, validations, calculs intermédiaires) sans exposer ces helpers comme partie de l'API publique. Tu peux les renommer ou les supprimer plus tard sans risquer de casser du code consommateur.
+</Callout>
+
+<ExerciseById id="02-private-method" />
+
+## Récapitulatif
+
+Voici les **quatre visibilités** que tu peux utiliser pour un membre de classe :
+
+| Visibilité | Syntaxe | Accès | Cas d'usage |
+|---|---|---|---|
+| **Public d'instance** | `name = value` ou `name() {}` | Partout | API publique, données partagées |
+| **Privé d'instance** | `#name = value` ou `#name() {}` | Uniquement dans la classe | Implémentation interne, état caché |
+| **Static public** | `static name = value` | `ClassName.name` | Constantes, factory methods, config |
+| **Static privé** | `static #name = value` | Uniquement dans la classe via `ClassName.#name` | Compteurs internes, registres globaux à la classe |
+
+Avec ces outils, tu peux concevoir des classes qui exposent une **API publique propre** tout en gardant leurs détails d'implémentation **réellement** invisibles. C'est un changement majeur par rapport au JS pré-ES2022, où "privé" n'était qu'une convention.
+
+Dans le prochain chapitre, on découvre les **static initialization blocks** : un cousin moins connu mais très pratique pour les classes qui ont besoin d'une initialisation statique complexe.

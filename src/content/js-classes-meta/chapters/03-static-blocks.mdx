@@ -1,0 +1,270 @@
+---
+number: "03"
+title: "Static avancé"
+subtitle: "Méthodes, champs, et static initialization blocks."
+---
+
+## Static methods
+
+On a déjà croisé le mot-clé <InlineCode>static</InlineCode> dans le chapitre sur les classes. Petit rappel : une méthode <InlineCode>static</InlineCode> appartient à la **classe elle-même**, pas à ses instances. Tu l'appelles directement sur le nom de la classe, et **jamais** sur un objet créé avec <InlineCode>new</InlineCode>.
+
+```js
+class Point {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  // Méthode statique : appartient à la classe Point, pas aux instances
+  static distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+}
+
+const p1 = new Point(0, 0);
+const p2 = new Point(3, 4);
+
+Point.distance(p1, p2); // ✅ 5
+p1.distance;            // undefined (pas sur l'instance)
+p1.distance(p2);        // ❌ TypeError : p1.distance is not a function
+```
+
+### Quand l'utiliser ?
+
+Les méthodes statiques sont parfaites pour :
+
+- **Factories** : des fonctions qui produisent une instance d'une certaine façon (parsing, conversion, valeur par défaut...)
+- **Helpers / utilitaires** : des opérations qui touchent à la classe mais n'ont besoin d'**aucune instance** pour fonctionner
+- **Comparateurs** : comme <InlineCode>distance(a, b)</InlineCode> ci-dessus, qui prend deux instances en argument plutôt que d'opérer sur <InlineCode>this</InlineCode>
+
+```js
+class User {
+  constructor(name) {
+    this.name = name;
+  }
+
+  // Factory : créer un User à partir d'un JSON
+  static fromJSON(json) {
+    const data = JSON.parse(json);
+    return new User(data.name);
+  }
+
+  // Helper : valider un nom sans avoir besoin d'instance
+  static isValidName(name) {
+    return typeof name === "string" && name.length >= 2;
+  }
+}
+
+const alice = User.fromJSON('{"name":"Alice"}');
+User.isValidName("Bo"); // true
+```
+
+<Callout variant="info" title="Pourquoi pas une simple fonction ?">
+  Tu pourrais écrire <InlineCode>userFromJSON(json)</InlineCode> en dehors de la classe et ça marcherait pareil. L'intérêt du <InlineCode>static</InlineCode> est **organisationnel** : on regroupe le code lié à <InlineCode>User</InlineCode> sous le même namespace, et on signale clairement que cette fonction "appartient" à <InlineCode>User</InlineCode>.
+</Callout>
+
+<ExerciseById id="03-static-method" />
+
+## Static fields
+
+Les **static fields** suivent exactement la même logique que les public fields, sauf qu'ils vivent sur la **classe** au lieu de vivre sur les instances. C'est très pratique pour stocker des **constantes**, des **configurations** par défaut, ou même un **singleton** partagé.
+
+```js
+class Config {
+  // Champs statiques
+  static version = "1.0";
+  static defaults = { theme: "dark", lang: "fr" };
+}
+
+console.log(Config.version);          // "1.0"
+console.log(Config.defaults.theme);   // "dark"
+
+const c = new Config();
+console.log(c.version);               // undefined (pas sur l'instance)
+```
+
+Les static fields sont initialisés **une seule fois**, au moment où la classe est définie. Toutes les instances partagent donc la même référence si la valeur est un objet.
+
+```js
+class Counter {
+  static count = 0;
+
+  static increment() {
+    Counter.count++;
+  }
+}
+
+Counter.increment();
+Counter.increment();
+Counter.increment();
+console.log(Counter.count); // 3
+```
+
+### Static fields privés
+
+On peut aussi rendre un static field **privé** en le préfixant avec <InlineCode>#</InlineCode>. Il devient alors inaccessible depuis l'extérieur de la classe.
+
+```js
+class IDGenerator {
+  static #lastId = 0;
+
+  static next() {
+    IDGenerator.#lastId++;
+    return IDGenerator.#lastId;
+  }
+}
+
+console.log(IDGenerator.next());  // 1
+console.log(IDGenerator.next());  // 2
+console.log(IDGenerator.next());  // 3
+// console.log(IDGenerator.#lastId); // ❌ SyntaxError
+```
+
+<Callout variant="info" title="Convention">
+  On écrit souvent les constantes statiques en <InlineCode>SCREAMING_SNAKE_CASE</InlineCode> pour les distinguer visuellement des autres fields : <InlineCode>static MAX_USERS = 100</InlineCode>. C'est une convention, pas une obligation du langage.
+</Callout>
+
+<ExerciseById id="03-static-field" />
+
+## Static initialization blocks
+
+Ajoutés en **ES2022**, les **static initialization blocks** sont sans doute la fonctionnalité la moins connue des classes modernes. Ils permettent d'exécuter du **code arbitraire** pendant l'initialisation de la classe — pas juste affecter une valeur.
+
+La syntaxe : un bloc <InlineCode>static {}</InlineCode> au sommet de la classe.
+
+```js
+class Registry {
+  static items = [];
+
+  static {
+    // Ce bloc s'exécute UNE SEULE FOIS, quand la classe est définie
+    if (typeof window !== "undefined") {
+      Registry.items.push("browser");
+    }
+    Registry.items.push("default");
+  }
+}
+
+console.log(Registry.items);
+// En navigateur : ["browser", "default"]
+// En Node.js   : ["default"]
+```
+
+### Pourquoi c'est utile ?
+
+Avec un simple <InlineCode>static field</InlineCode>, tu ne peux mettre qu'**une seule expression** comme valeur. Dès que ton initialisation a besoin de :
+
+- Un <InlineCode>try/catch</InlineCode>
+- Une boucle <InlineCode>for</InlineCode>
+- Une lecture conditionnelle de l'environnement
+- L'accumulation de valeurs avec une logique complexe
+
+...tu n'as pas le choix avec les static fields seuls. Avant ES2022, on devait soit faire ça dans le constructor (mais c'est trop tard, ça s'exécute à chaque <InlineCode>new</InlineCode>), soit faire un appel externe juste après la classe :
+
+```js
+// Workaround historique — moche
+class Service {
+  static config = null;
+}
+// Init après coup, hors de la classe...
+try {
+  Service.config = JSON.parse(loadConfig());
+} catch {
+  Service.config = { fallback: true };
+}
+```
+
+Avec un static block, on garde tout **à l'intérieur** de la classe, là où c'est lisible et où c'est **encapsulé** :
+
+```js
+class Service {
+  static config;
+
+  static {
+    try {
+      Service.config = JSON.parse(loadConfig());
+    } catch {
+      Service.config = { fallback: true };
+    }
+  }
+}
+```
+
+### Plusieurs blocks dans la même classe
+
+Tu peux avoir **plusieurs** blocks <InlineCode>static {}</InlineCode> dans une même classe. Ils s'exécutent dans l'**ordre déclaratif**, en alternance avec les static fields.
+
+```js
+class Pipeline {
+  static steps = [];
+
+  static {
+    Pipeline.steps.push("init");
+  }
+
+  static config = { verbose: true };
+
+  static {
+    if (Pipeline.config.verbose) {
+      Pipeline.steps.push("verbose-mode");
+    }
+    Pipeline.steps.push("ready");
+  }
+}
+
+console.log(Pipeline.steps);
+// ["init", "verbose-mode", "ready"]
+```
+
+### Accès aux private fields/methods
+
+Les static blocks ont un super-pouvoir : ils peuvent accéder aux **fields privés** et **méthodes privées** de la classe. C'est très pratique pour initialiser un état privé avec une logique complexe.
+
+```js
+class Cache {
+  static #store = new Map();
+  static #maxSize;
+
+  static {
+    // Init basée sur l'environnement, accès direct aux #fields
+    Cache.#maxSize = typeof process !== "undefined" ? 1000 : 100;
+    Cache.#store.set("default", null);
+  }
+
+  static get(key) {
+    return Cache.#store.get(key);
+  }
+}
+```
+
+<Callout variant="warn" title="Attention au this">
+  À l'intérieur d'un <InlineCode>static {}</InlineCode>, <InlineCode>this</InlineCode> fait référence à la **classe elle-même** (comme dans une méthode statique), pas à une instance. Tu peux donc écrire <InlineCode>this.items</InlineCode> au lieu de <InlineCode>Registry.items</InlineCode> si tu préfères.
+</Callout>
+
+```js
+class Registry {
+  static items = [];
+
+  static {
+    // `this` === Registry ici
+    this.items.push("default");
+  }
+}
+```
+
+<ExerciseById id="03-static-init" />
+
+## Tableau récap
+
+Avec les ES2022, tu disposes de **4 cases** pour tes données de classe : public/private croisé avec instance/static.
+
+| Case | Syntaxe | Visibilité | Vit sur |
+|---|---|---|---|
+| Public instance | `name = "Alice"` | Accessible partout | Chaque instance |
+| Private instance | `#password = "..."` | Uniquement dans la classe | Chaque instance |
+| Public static | `static version = "1.0"` | Accessible partout | La classe |
+| Private static | `static #lastId = 0` | Uniquement dans la classe | La classe |
+
+À cela s'ajoutent les **static blocks** qui permettent une **initialisation impérative** au moment de la définition de la classe, avec accès complet aux fields privés.
+
+Bien utilisés, les outils statiques rendent une classe **autonome** : elle embarque ses propres helpers, sa propre config, et son propre état partagé, sans avoir besoin de modules tiers ou de code d'init dispersé.

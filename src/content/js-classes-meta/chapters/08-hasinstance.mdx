@@ -1,0 +1,166 @@
+---
+number: "08"
+title: "instanceof & concat customs"
+subtitle: "Symbol.hasInstance et Symbol.isConcatSpreadable."
+---
+
+Deux **well-known symbols** pour customiser des opérations qu'on croyait figées : l'opérateur <InlineCode>instanceof</InlineCode> et le comportement de <InlineCode>Array#concat</InlineCode>. Encore deux exemples concrets de "metaprogramming" : on plonge un cran sous la syntaxe pour redéfinir ce que JavaScript fait par défaut.
+
+## Symbol.hasInstance
+
+Quand tu écris <InlineCode>value instanceof Constructor</InlineCode>, le moteur ne fait pas de la magie noire : il appelle en réalité <InlineCode>Constructor[Symbol.hasInstance](value)</InlineCode>. Par défaut, cette méthode parcourt la **chaîne de prototypes** de <InlineCode>value</InlineCode> à la recherche de <InlineCode>Constructor.prototype</InlineCode>. Si tu override ce symbol, tu peux totalement changer la logique de <InlineCode>instanceof</InlineCode>.
+
+```js
+class Even {
+  // Override : on définit notre propre logique
+  static [Symbol.hasInstance](value) {
+    return typeof value === "number" && value % 2 === 0;
+  }
+}
+
+console.log(4 instanceof Even);   // true
+console.log(5 instanceof Even);   // false
+console.log("x" instanceof Even); // false
+console.log(0 instanceof Even);   // true
+```
+
+Remarque que <InlineCode>Even</InlineCode> n'a même pas besoin d'être instanciable : il n'y a aucun <InlineCode>constructor</InlineCode>, aucune instance. <InlineCode>instanceof</InlineCode> n'a plus rien à voir avec la "création d'objet" — c'est devenu une fonction de **type-checking** custom avec une syntaxe naturelle.
+
+### À quoi ça sert vraiment ?
+
+Le cas d'usage légitime, c'est le **duck typing** : vérifier qu'une valeur a la bonne forme structurelle, indépendamment de sa chaîne de prototypes.
+
+```js
+// Vérifie qu'un objet ressemble à une Promise (a un .then())
+class Thenable {
+  static [Symbol.hasInstance](value) {
+    return value != null && typeof value.then === "function";
+  }
+}
+
+const fakePromise = { then(cb) { cb(42); } };
+const realPromise = Promise.resolve(1);
+
+console.log(fakePromise instanceof Thenable); // true
+console.log(realPromise instanceof Thenable); // true
+console.log({} instanceof Thenable);          // false
+```
+
+C'est exactement ce que fait <InlineCode>Promise.resolve()</InlineCode> en interne pour reconnaître un thenable.
+
+<Callout variant="warn" title="À utiliser avec parcimonie">
+  Override <InlineCode>Symbol.hasInstance</InlineCode>, c'est puissant mais ça **casse l'intuition** des autres développeurs. Quand on lit <InlineCode>value instanceof Foo</InlineCode>, on s'attend instinctivement à un check de chaîne de prototypes — pas à une fonction custom qui peut faire n'importe quoi. Si tu choisis cette voie, **documente clairement** le comportement et garde-le proche du sens originel : "vérifier que la valeur appartient à ce type/cette catégorie".
+</Callout>
+
+<ExerciseById id="08-has-instance" />
+
+## Symbol.isConcatSpreadable
+
+Par défaut, <InlineCode>Array#concat()</InlineCode> a une règle un peu surprenante : il **étale** (spread) les arrays passés en argument, mais **pas** les autres objets — même s'ils ressemblent à des arrays.
+
+```js
+const arr = [1, 2];
+
+// Un vrai array est étalé
+[].concat(arr, [3, 4]); // [1, 2, 3, 4]
+
+// Un objet array-like ne l'est pas — il est ajouté tel quel
+const plain = { 0: "a", 1: "b", length: 2 };
+[].concat(arr, plain); // [1, 2, { 0: "a", 1: "b", length: 2 }]
+```
+
+C'est <InlineCode>Symbol.isConcatSpreadable</InlineCode> qui contrôle ce comportement. Tu peux forcer un objet array-like à être étalé en lui ajoutant <InlineCode>[Symbol.isConcatSpreadable]: true</InlineCode>.
+
+```js
+const arr = [1, 2];
+
+// Objet array-like, mais on demande explicitement le spread
+const obj = {
+  0: "a",
+  1: "b",
+  length: 2,
+  [Symbol.isConcatSpreadable]: true,
+};
+
+[].concat(arr, obj); // [1, 2, "a", "b"]
+```
+
+Inversement, tu peux **empêcher** un array d'être étalé en mettant <InlineCode>false</InlineCode> :
+
+```js
+const arr = [1, 2, 3];
+arr[Symbol.isConcatSpreadable] = false;
+
+[].concat([0], arr); // [0, [1, 2, 3]]  — l'array est inséré tel quel
+```
+
+### Cas d'usage concret
+
+Très utilisé par certaines bibliothèques pour exposer des **collections custom** qui s'intègrent naturellement avec les arrays natifs sans avoir à hériter d'<InlineCode>Array</InlineCode>.
+
+```js
+class Stack {
+  constructor(...items) {
+    this.items = items;
+    this.length = items.length;
+    // On veut être étalé par concat
+    this[Symbol.isConcatSpreadable] = true;
+  }
+}
+
+// Pour que concat puisse lire les indices, on peut copier les items
+// ou utiliser un Proxy. Version simple :
+const s = new Stack("x", "y", "z");
+s[0] = "x";
+s[1] = "y";
+s[2] = "z";
+
+[].concat([1, 2], s); // [1, 2, "x", "y", "z"]
+```
+
+<Callout variant="info" title="Règle par défaut">
+  Pour les **arrays natifs**, <InlineCode>Symbol.isConcatSpreadable</InlineCode> est <InlineCode>true</InlineCode> implicitement (même s'il n'apparaît pas comme propriété). Pour **tous les autres objets**, il est <InlineCode>false</InlineCode> par défaut. Le symbol n'a besoin d'être défini que si tu veux **changer** ce comportement par défaut.
+</Callout>
+
+<ExerciseById id="08-concat-spreadable" />
+
+## Symbol.unscopables
+
+Mention rapide d'un symbol assez exotique mais important pour la **rétrocompatibilité** : <InlineCode>Symbol.unscopables</InlineCode>. Il permet d'exclure certaines propriétés du <InlineCode>with</InlineCode> statement.
+
+```js
+console.log(Array.prototype[Symbol.unscopables].includes); // true
+console.log(Array.prototype[Symbol.unscopables].find);     // true
+```
+
+Pourquoi cet objet existe ? Petit retour en arrière. Le <InlineCode>with</InlineCode> statement (legacy, à éviter) injectait toutes les propriétés d'un objet dans le scope local :
+
+```js
+const arr = [1, 2, 3];
+
+// Vieux code (mauvaise idée, mais légal en mode non-strict)
+with (arr) {
+  // Ici, "length", "push", etc. sont accessibles directement
+  console.log(length); // 3
+}
+```
+
+Le problème : quand ES7 a ajouté <InlineCode>Array.prototype.includes</InlineCode>, du vieux code utilisant <InlineCode>with</InlineCode> et ayant déjà une variable nommée <InlineCode>includes</InlineCode> dans le scope se retrouvait soudainement à appeler la **mauvaise fonction** (la nouvelle méthode du prototype). <InlineCode>Symbol.unscopables</InlineCode> a été inventé pour dire au moteur : "même dans un <InlineCode>with</InlineCode>, ne masque pas les variables externes avec ces nouvelles méthodes".
+
+```js
+// Schéma simplifié de ce que JS fait en interne
+const unscopables = Array.prototype[Symbol.unscopables];
+// unscopables.includes === true → "includes" est exclu du with
+```
+
+En pratique tu n'auras jamais à toucher ce symbol toi-même : il n'existe que pour préserver la compatibilité de l'ajout de nouvelles méthodes sur <InlineCode>Array.prototype</InlineCode>. Mais c'est un bel exemple de **comment ECMAScript fait évoluer le langage sans casser le code existant**.
+
+## Récap
+
+| Symbol | Hook dans... | Override pour... |
+|---|---|---|
+| `Symbol.hasInstance` | `instanceof` | Faire du type-checking custom |
+| `Symbol.isConcatSpreadable` | `Array#concat` | Forcer/empêcher le spread d'un objet |
+| `Symbol.unscopables` | `with` statement | Préserver la compat des nouvelles méthodes |
+
+Ces deux premiers symbols sont rarement nécessaires, mais quand ils tombent à pic, ils permettent d'écrire du code qui s'intègre très naturellement avec la syntaxe JavaScript native — sans contournement, sans helper bizarre. C'est exactement l'esprit de la metaprogrammation : **étendre le langage de l'intérieur**.

@@ -1,0 +1,254 @@
+---
+number: "04"
+title: "Symbols : un nouveau primitif"
+subtitle: "Création, unicité, registre global, comme clés d'objet."
+---
+
+## C'est quoi un Symbol ?
+
+Avant ES6, JavaScript avait 5 types primitifs : <InlineCode>number</InlineCode>, <InlineCode>string</InlineCode>, <InlineCode>boolean</InlineCode>, <InlineCode>null</InlineCode>, <InlineCode>undefined</InlineCode>. ES6 en a introduit un sixième : <InlineCode>symbol</InlineCode> (et plus tard <InlineCode>bigint</InlineCode> en ES2020, mais c'est une autre histoire).
+
+Le <InlineCode>symbol</InlineCode> est particulier : contrairement aux autres primitifs, il n'a **pas de littéral**. Tu ne peux pas écrire un symbol comme tu écris <InlineCode>'foo'</InlineCode> ou <InlineCode>42</InlineCode>. La seule façon d'en créer un, c'est d'appeler la fonction <InlineCode>Symbol()</InlineCode>.
+
+```js
+const id = Symbol();
+const id2 = Symbol("user-id");
+
+console.log(typeof id);          // "symbol"
+console.log(typeof id2);         // "symbol"
+console.log(id2);                // Symbol(user-id)
+console.log(id2.description);    // "user-id"
+```
+
+La string passée à <InlineCode>Symbol()</InlineCode> est une **description** — c'est juste un libellé pour le debug. Elle n'a **aucun rôle fonctionnel** : deux symbols avec la même description ne sont pas égaux (on y revient plus bas).
+
+<Callout variant="warn" title="Pas de new Symbol() !">
+  On écrit <InlineCode>Symbol()</InlineCode>, **pas** <InlineCode>new Symbol()</InlineCode>. Si tu mets <InlineCode>new</InlineCode>, tu obtiens une <InlineCode>TypeError</InlineCode>. C'est une fonction de fabrique, pas un constructeur de classe.
+</Callout>
+
+### Non-coercible
+
+Les symbols sont **non-coercibles** vers les autres types primitifs. Si tu essaies de les convertir implicitement en string ou en number, JavaScript lance une <InlineCode>TypeError</InlineCode>.
+
+```js
+const s = Symbol("hello");
+
+// ❌ TypeError : Cannot convert a Symbol value to a number
++s;
+s * 2;
+
+// ❌ TypeError : Cannot convert a Symbol value to a string
+"" + s;
+`${s}`;
+
+// ✅ Conversion explicite : OK
+String(s);          // "Symbol(hello)"
+s.toString();       // "Symbol(hello)"
+s.description;      // "hello"
+```
+
+C'est un choix volontaire des concepteurs du langage : ça empêche les conversions accidentelles qui pourraient masquer des bugs. Si tu veux la string, tu **dois** la demander explicitement.
+
+<ExerciseById id="04-symbol-create" />
+
+## Unicité : la garantie clé
+
+C'est **la** propriété fondamentale des symbols : chaque appel à <InlineCode>Symbol()</InlineCode> produit une valeur **strictement unique**. Même avec la même description, deux symbols ne sont **jamais** égaux entre eux.
+
+```js
+const a = Symbol("x");
+const b = Symbol("x");
+
+a === b;  // false (toujours)
+a == b;   // false (toujours)
+
+const c = Symbol();  // sans description
+const d = Symbol();  // sans description aussi
+c === d;  // false
+```
+
+C'est ce qui les rend **incollisionnables**. Si je crée un symbol dans mon module, et que tu en crées un dans le tien (même avec la même description), nos symbols sont **différents**. Aucune chance de collision accidentelle.
+
+### Cas d'usage : enums sans collision
+
+```js
+// Avant les symbols : risque de collision avec d'autres strings
+const STATUS_PENDING = "pending";
+const STATUS_DONE = "done";
+
+if (task.status === "done") { /* ... */ }   // marche, mais...
+if (task.status === STATUS_DONE) { /* ... */ }  // mieux
+
+// Avec symbols : impossible de comparer accidentellement
+const STATUS_PENDING = Symbol("pending");
+const STATUS_DONE = Symbol("done");
+
+if (task.status === STATUS_DONE) { /* ... */ }   // ✅
+if (task.status === "done") { /* ... */ }        // ❌ toujours false
+```
+
+### Cas d'usage : metadata sans écraser
+
+```js
+const META = Symbol("meta");
+
+function tagObject(obj, info) {
+  obj[META] = info;
+}
+
+const user = { name: "Alice", meta: "déjà existante !" };
+tagObject(user, { internal: true });
+
+console.log(user.meta);    // "déjà existante !" (intacte, c'est une string)
+console.log(user[META]);   // { internal: true } (notre clé symbol)
+```
+
+On peut attacher des metadata à un objet **sans risquer d'écraser** une clé string déjà existante. La clé string <InlineCode>"meta"</InlineCode> et la clé symbol <InlineCode>Symbol("meta")</InlineCode> coexistent paisiblement.
+
+<ExerciseById id="04-symbol-unique" />
+
+## Le registre global avec Symbol.for()
+
+Parfois, l'unicité n'est **pas** ce qu'on veut. Imagine deux librairies indépendantes qui veulent reconnaître la même chose — par exemple un protocole standardisé pour "objet sérialisable". Si chacune crée son propre <InlineCode>Symbol("serializable")</InlineCode>, elles ne pourront jamais s'accorder.
+
+Pour ces cas-là, JavaScript fournit un **registre global** de symbols, via <InlineCode>Symbol.for()</InlineCode>.
+
+```js
+const a = Symbol.for("shared-id");
+const b = Symbol.for("shared-id");
+
+a === b;  // true (même symbol dans le registre)
+```
+
+La règle : si un symbol avec cette clé existe déjà dans le registre global, <InlineCode>Symbol.for(key)</InlineCode> le **retourne**. Sinon, il en crée un nouveau et l'enregistre. Les appels suivants avec la même clé retourneront toujours ce même symbol.
+
+### Récupérer la clé
+
+Pour le chemin inverse (récupérer la clé d'un symbol enregistré), il y a <InlineCode>Symbol.keyFor()</InlineCode>.
+
+```js
+const s = Symbol.for("my-key");
+
+Symbol.keyFor(s);              // "my-key"
+
+const local = Symbol("local");
+Symbol.keyFor(local);          // undefined (pas dans le registre)
+```
+
+<Callout variant="warn" title="À utiliser avec parcimonie">
+  Le registre global est **vraiment global** : il est partagé entre tous les modules, toutes les iframes, tous les workers du même contexte. C'est pratique pour les cas légitimes (interop entre librairies, polyfills standardisés), mais ça **pollue un namespace global**. Pour la plupart de tes besoins, un simple <InlineCode>Symbol()</InlineCode> local fait très bien le job.
+</Callout>
+
+### Quand utiliser <InlineCode>Symbol.for()</InlineCode> ?
+
+- Les **well-known symbols** que tu ne contrôles pas : <InlineCode>Symbol.iterator</InlineCode>, <InlineCode>Symbol.asyncIterator</InlineCode>... (chapitre suivant)
+- Les **protocoles inter-librairies** quand vraiment nécessaire (ex : <InlineCode>Symbol.observable</InlineCode> historiquement)
+- Le partage entre **realms** (iframes, workers, modules vraiment séparés)
+
+Dans 95% des cas, tu utiliseras <InlineCode>Symbol()</InlineCode> tout court.
+
+<ExerciseById id="04-symbol-for" />
+
+## Symbols comme clés d'objet
+
+Voilà le cas d'usage qui fait briller les symbols. En plus des strings, JavaScript autorise les symbols comme **clés** d'objet, via la syntaxe entre crochets.
+
+```js
+const ID = Symbol("id");
+
+const user = {
+  name: "Alice",
+  age: 30,
+  [ID]: 42,   // syntaxe computed property
+};
+
+console.log(user.name);   // "Alice"
+console.log(user[ID]);    // 42
+```
+
+Tu **dois** utiliser les crochets : <InlineCode>user.ID</InlineCode> ne marche pas (ça chercherait une clé string <InlineCode>"ID"</InlineCode>).
+
+### Invisibles aux opérations classiques
+
+C'est ici que ça devient intéressant. Les clés symbol sont **invisibles** pour la plupart des opérations qu'on utilise pour parcourir un objet :
+
+```js
+const ID = Symbol("id");
+
+const user = {
+  name: "Alice",
+  age: 30,
+  [ID]: 42,
+};
+
+Object.keys(user);                  // ["name", "age"]
+Object.values(user);                // ["Alice", 30]
+Object.entries(user);               // [["name", "Alice"], ["age", 30]]
+
+JSON.stringify(user);               // '{"name":"Alice","age":30}'
+
+for (const key in user) {
+  console.log(key);                 // "name", "age" — pas l'ID
+}
+```
+
+Pour les voir, il faut une méthode dédiée :
+
+```js
+Object.getOwnPropertySymbols(user);  // [Symbol(id)]
+
+// Ou la combinaison qui donne TOUTES les clés (string + symbol)
+Reflect.ownKeys(user);               // ["name", "age", Symbol(id)]
+```
+
+### Cas d'usage : metadata "discrète"
+
+Cette invisibilité est exactement ce qu'on veut quand on attache des **metadata** à un objet sans polluer son interface publique :
+
+```js
+const VERSION = Symbol("version");
+const INTERNAL = Symbol("internal");
+
+function track(obj) {
+  obj[VERSION] = "1.0";
+  obj[INTERNAL] = { trackedAt: Date.now() };
+  return obj;
+}
+
+const product = track({ name: "Coffee", price: 4.5 });
+
+// Le produit reste "propre" pour les usages habituels
+JSON.stringify(product);    // '{"name":"Coffee","price":4.5}'
+Object.keys(product);       // ["name", "price"]
+
+// Mais on peut quand même retrouver nos metadata
+product[VERSION];           // "1.0"
+product[INTERNAL];          // { trackedAt: ... }
+```
+
+Le code applicatif voit un objet propre. Le code interne (qui détient les symbols) peut accéder à ses metadata.
+
+<Callout variant="warn" title="Pas vraiment 'privé'">
+  Les clés symbol sont **discrètes**, pas **privées**. Quelqu'un qui sait ce qu'il fait peut les récupérer avec <InlineCode>Object.getOwnPropertySymbols()</InlineCode>, lire leur description, voire les utiliser. Pour de la **vraie privacy** (impossible à contourner), il faut les <InlineCode>#fields</InlineCode> privés des classes ou des <InlineCode>WeakMap</InlineCode>.
+</Callout>
+
+<ExerciseById id="04-symbol-key" />
+
+## Vers les well-known symbols
+
+Tout ce qu'on a vu jusqu'ici, c'est l'usage **applicatif** des symbols : créer des constantes uniques, attacher des metadata. Mais il y a une autre dimension qui est sans doute la plus puissante.
+
+JavaScript expose une série de **symbols spéciaux** sur l'objet <InlineCode>Symbol</InlineCode> lui-même :
+
+```js
+Symbol.iterator        // utilisé par for...of, spread, destructuring
+Symbol.asyncIterator   // utilisé par for await...of
+Symbol.toPrimitive     // appelé quand l'objet doit devenir un primitif
+Symbol.hasInstance     // contrôle le comportement de instanceof
+Symbol.toStringTag     // personnalise Object.prototype.toString
+// ...et d'autres
+```
+
+Ces symbols sont des **hooks** dans le moteur JavaScript. En définissant des méthodes sous ces clés sur tes propres objets, tu peux **modifier la façon dont JavaScript traite tes objets** — leur faire supporter <InlineCode>for...of</InlineCode>, customiser leur conversion en string, changer le comportement de <InlineCode>instanceof</InlineCode>...
+
+C'est ça, la **metaprogrammation** : du code qui modifie le comportement d'autres parties du langage. C'est tout l'objet du chapitre suivant.

@@ -1,0 +1,215 @@
+---
+number: "07"
+title: "Hooker les opérations de string"
+subtitle: "Symbol.match, Symbol.replace, Symbol.search, Symbol.split."
+---
+
+## Une mécanique méconnue de String
+
+Quand tu écris <InlineCode>str.match(pattern)</InlineCode>, tu penses probablement que <InlineCode>match</InlineCode> "lit" le pattern et applique sa logique. En réalité, c'est l'**inverse** : la méthode <InlineCode>match</InlineCode> appelle <InlineCode>pattern[Symbol.match](str)</InlineCode>. C'est le pattern qui décide comment matcher.
+
+Pareil pour <InlineCode>replace</InlineCode>, <InlineCode>search</InlineCode> et <InlineCode>split</InlineCode> : ils délèguent à des méthodes Symbol portées par leur argument.
+
+```js
+// Ce que tu écris :
+"foobar".match(/foo/);
+
+// Ce qui se passe sous le capot :
+/foo/[Symbol.match]("foobar");
+```
+
+C'est pour ça qu'une **regex** sait répondre : elle implémente ces 4 Symbols. Mais rien ne t'empêche de faire pareil avec **n'importe quel objet**. Tes classes peuvent se comporter comme des patterns sans toucher au prototype de <InlineCode>String</InlineCode> ou de <InlineCode>RegExp</InlineCode>.
+
+<Callout variant="info" title="Cas d'usage concrets">
+  Ces 4 Symbols permettent de créer des **matchers sur-mesure** : recherche fuzzy, recherche structurelle dans du JSON, parsing de DSL, censure de mots-clés, fonctions sémantiques type "contient X mais pas Y"... Tout ça réutilisant la même API native que les regex.
+</Callout>
+
+## Symbol.match
+
+Override le comportement de <InlineCode>String#match</InlineCode>. La méthode reçoit la string sur laquelle on appelle <InlineCode>.match()</InlineCode> et doit retourner :
+
+- Un **tableau** (avec au minimum la string trouvée) si match.
+- <InlineCode>null</InlineCode> sinon.
+
+C'est la même convention que <InlineCode>RegExp.prototype[Symbol.match]</InlineCode>, qui retourne par exemple <InlineCode>["foo"]</InlineCode> ou <InlineCode>null</InlineCode>.
+
+```js
+class Contains {
+  constructor(value) {
+    this.value = value;
+  }
+
+  // La méthode reçoit la string sur laquelle on a appelé .match()
+  [Symbol.match](str) {
+    return str.includes(this.value) ? [this.value] : null;
+  }
+}
+
+console.log("foobar".match(new Contains("bar")));  // ["bar"]
+console.log("foobar".match(new Contains("xyz")));  // null
+
+// Et donc tu peux écrire des choses très lisibles :
+if ("hello world".match(new Contains("world"))) {
+  console.log("Trouvé !");
+}
+```
+
+Tu pourrais évidemment écrire <InlineCode>"foobar".includes("bar")</InlineCode>. L'intérêt n'est pas de remplacer <InlineCode>includes</InlineCode>, mais de pouvoir **passer ton matcher** à une fonction qui s'attend à un argument compatible avec <InlineCode>.match()</InlineCode> — par exemple une lib qui filtre des strings selon un pattern user-defined.
+
+<ExerciseById id="07-symbol-match" />
+
+## Symbol.replace
+
+Override <InlineCode>String#replace</InlineCode>. La méthode reçoit deux arguments :
+
+- La string sur laquelle on appelle <InlineCode>.replace()</InlineCode>.
+- Le **replacement** : une string ou une fonction (comme avec une regex).
+
+Elle doit retourner la string finale après remplacement.
+
+```js
+class Censor {
+  constructor(word) {
+    this.word = word;
+  }
+
+  [Symbol.replace](str, replacement) {
+    // On découpe sur le mot puis on rassemble avec le remplacement
+    return str.split(this.word).join(replacement);
+  }
+}
+
+console.log("hello world".replace(new Censor("world"), "***"));
+// "hello ***"
+
+console.log("foo bar foo".replace(new Censor("foo"), "X"));
+// "X bar X"
+```
+
+### Replacement-as-function
+
+Tu peux aussi accepter une fonction comme replacement, exactement comme une regex le ferait :
+
+```js
+class CensorFn {
+  constructor(word) {
+    this.word = word;
+  }
+
+  [Symbol.replace](str, replacement) {
+    if (typeof replacement === "function") {
+      return str.split(this.word).join(replacement(this.word));
+    }
+    return str.split(this.word).join(replacement);
+  }
+}
+
+const result = "foo bar foo".replace(new CensorFn("foo"), (m) => m.toUpperCase());
+console.log(result); // "FOO bar FOO"
+```
+
+C'est exactement le pattern qu'utilisent les libs de templating ou de pre-processing : on définit un matcher custom, et l'utilisateur peut décider quoi faire de chaque match via une callback.
+
+<ExerciseById id="07-symbol-replace" />
+
+## Symbol.search & Symbol.split
+
+Les deux derniers Symbols suivent les mêmes principes.
+
+### Symbol.search
+
+Override <InlineCode>String#search</InlineCode>. La méthode reçoit la string et doit retourner :
+
+- L'**index** de la première occurrence trouvée.
+- <InlineCode>-1</InlineCode> si rien n'est trouvé.
+
+```js
+class FirstOccurrence {
+  constructor(value) {
+    this.value = value;
+  }
+  [Symbol.search](str) {
+    return str.indexOf(this.value);
+  }
+}
+
+console.log("hello world".search(new FirstOccurrence("world"))); // 6
+console.log("hello world".search(new FirstOccurrence("xyz")));   // -1
+```
+
+### Symbol.split
+
+Override <InlineCode>String#split</InlineCode>. La méthode reçoit la string et un éventuel <InlineCode>limit</InlineCode>, et doit retourner un **tableau** de morceaux.
+
+```js
+class WordSplitter {
+  // Découpe sur n'importe quelle suite d'espaces
+  [Symbol.split](str) {
+    return str.split(/\s+/);
+  }
+}
+
+console.log("a b  c".split(new WordSplitter())); // ["a", "b", "c"]
+```
+
+### Combiner les 4 dans un même objet
+
+Rien n'empêche un objet d'implémenter les 4 Symbols à la fois et de se comporter comme une "super-regex" custom :
+
+```js
+class WordPattern {
+  constructor(word) { this.word = word; }
+  [Symbol.match](str)            { return str.includes(this.word) ? [this.word] : null; }
+  [Symbol.search](str)           { return str.indexOf(this.word); }
+  [Symbol.replace](str, repl)    { return str.split(this.word).join(repl); }
+  [Symbol.split](str)            { return str.split(this.word); }
+}
+
+const w = new WordPattern("foo");
+console.log("a foo b foo c".match(w));        // ["foo"]
+console.log("a foo b".search(w));             // 2
+console.log("a foo b foo c".replace(w, "X")); // "a X b X c"
+console.log("a foo b foo c".split(w));        // ["a ", " b ", " c"]
+```
+
+<Callout variant="warn" title="Pas de remplacement de regex">
+  Les Symbols string-ops ne te dispensent pas d'apprendre les regex pour les vrais besoins de pattern matching. Ils servent à **étendre** les méthodes natives de String avec des matchers conceptuellement différents (sémantiques, structurels, fuzzy), pas à réimplémenter les regex.
+</Callout>
+
+## Pourquoi c'est puissant
+
+Ces 4 Symbols ouvrent la porte à des **DSL minimalistes** (small Domain-Specific Languages) qui réutilisent la syntaxe naturelle des méthodes de String comme **dispatcher**. L'utilisateur final écrit toujours <InlineCode>str.match(pattern)</InlineCode> ou <InlineCode>str.replace(pattern, ...)</InlineCode>, mais derrière, c'est ta logique custom qui s'exécute.
+
+### Avantages par rapport au monkey-patching
+
+L'alternative naïve serait d'ajouter une méthode <InlineCode>fuzzyMatch</InlineCode> sur <InlineCode>String.prototype</InlineCode>. Mauvaise idée :
+
+- **Conflits** : une autre lib peut définir la même méthode avec une sémantique différente.
+- **Lisibilité** : le lecteur ne sait pas d'où vient <InlineCode>fuzzyMatch</InlineCode> ni où la chercher.
+- **Couplage global** : modifier <InlineCode>String.prototype</InlineCode> impacte **tout** le code de la page.
+
+Avec les Symbols, l'extension est **opt-in et locale** : tu passes un objet à <InlineCode>match</InlineCode>, et seul cet appel utilise ta logique. Aucun effet de bord global.
+
+```js
+// Pas de pollution globale, le matcher est juste un objet
+const matcher = new Contains("error");
+const lines = ["info: ok", "error: oops", "warn: hmm"];
+const errorLines = lines.filter((line) => line.match(matcher));
+console.log(errorLines); // ["error: oops"]
+```
+
+## Récapitulatif
+
+| Méthode String | Symbol appelé | Signature | Retour |
+|---|---|---|---|
+| `str.match(p)` | `p[Symbol.match]` | `(str)` | tableau ou `null` |
+| `str.replace(p, r)` | `p[Symbol.replace]` | `(str, replacement)` | string |
+| `str.search(p)` | `p[Symbol.search]` | `(str)` | index ou `-1` |
+| `str.split(p)` | `p[Symbol.split]` | `(str, limit)` | tableau |
+
+### À retenir
+
+- Les méthodes <InlineCode>match</InlineCode>, <InlineCode>replace</InlineCode>, <InlineCode>search</InlineCode>, <InlineCode>split</InlineCode> de String **délèguent** à leur argument.
+- N'importe quel objet implémentant ces Symbols peut servir de pattern.
+- C'est une alternative propre au monkey-patching : extension **opt-in**, sans pollution globale.
+- Les regex sont juste un cas particulier — le langage est conçu pour que tes classes puissent jouer le même rôle.

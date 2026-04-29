@@ -1,0 +1,179 @@
+---
+number: "01"
+title: "Classes en profondeur"
+subtitle: "Expressions, strict mode, evaluation order, hoisting."
+---
+
+## Class declaration vs class expression
+
+Tu connais sans doute la **déclaration de classe** classique :
+
+```js
+class Foo {
+  hello() { return "hi"; }
+}
+```
+
+Mais tu peux aussi écrire une classe **comme une expression**, c'est-à-dire la stocker dans une variable, la passer en argument, la retourner depuis une fonction. C'est ce qu'on appelle une **class expression**.
+
+```js
+// Class expression anonyme
+const Foo = class {
+  hello() { return "hi"; }
+};
+
+// Class expression nommée (le nom est local à la classe)
+const Bar = class MyInternalName {
+  who() { return MyInternalName.name; }
+};
+
+const b = new Bar();
+console.log(b.who()); // "MyInternalName"
+// MyInternalName n'existe pas à l'extérieur :
+// new MyInternalName(); // ❌ ReferenceError
+```
+
+Le nom interne d'une class expression nommée est utile pour la **récursion** ou pour des messages d'erreur plus explicites en debug.
+
+### Cas d'usage concrets
+
+Les class expressions servent surtout dans deux situations :
+
+```js
+// 1) Passer une classe en argument
+function makeRegistered(BaseClass) {
+  return class extends BaseClass {
+    constructor(...args) {
+      super(...args);
+      console.log("Registered:", this);
+    }
+  };
+}
+
+const RegisteredArray = makeRegistered(Array);
+
+// 2) Choisir une classe selon une condition
+const Storage = isBrowser
+  ? class { save(k, v) { localStorage.setItem(k, v); } }
+  : class { save(k, v) { fs.writeFileSync(k, v); } };
+```
+
+Cette technique de **mixin** (une fonction qui prend une classe et en retourne une étendue) repose entièrement sur les class expressions.
+
+<ExerciseById id="01-class-expression" />
+
+## Strict mode automatique
+
+Le corps d'une classe est **toujours exécuté en strict mode**, que tu écrives <InlineCode>"use strict"</InlineCode> ou non, que ton fichier soit un module ou un script. Pas de configuration, pas de choix.
+
+La conséquence la plus visible concerne <InlineCode>this</InlineCode>. En mode non-strict, une fonction appelée "nue" (sans receveur) voit <InlineCode>this</InlineCode> pointer vers <InlineCode>globalThis</InlineCode> (le <InlineCode>window</InlineCode> du navigateur). En **strict mode**, <InlineCode>this</InlineCode> vaut <InlineCode>undefined</InlineCode>.
+
+```js
+class Animal {
+  speak() {
+    return this;
+  }
+}
+
+const obj = new Animal();
+console.log(obj.speak()); // l'instance Animal {}
+
+// On détache la méthode du receveur
+const speak = obj.speak;
+console.log(speak()); // undefined  (pas window/global !)
+```
+
+C'est très différent du comportement des objets littéraux non-classés en script non-strict. Si tu débogues un <InlineCode>TypeError: Cannot read properties of undefined</InlineCode> sur une méthode de classe, le coupable est très souvent un détachement de méthode.
+
+<Callout variant="warn" title="Détachement = perte de this">
+  Dès que tu écris <InlineCode>const f = obj.method</InlineCode>, tu obtiens une fonction "nue". L'appeler avec <InlineCode>f()</InlineCode> ne lui rebranchera pas <InlineCode>obj</InlineCode> automatiquement. Solutions : <InlineCode>obj.method.bind(obj)</InlineCode>, une arrow function <InlineCode>{"() => obj.method()"}</InlineCode>, ou définir la méthode comme un champ-arrow dans la classe.
+</Callout>
+
+Le strict mode apporte aussi quelques autres règles utiles :
+
+- Les **paramètres en doublon** sont interdits : <InlineCode>function f(a, a) {"{}"}</InlineCode> lance une erreur.
+- L'écriture sur une **propriété en lecture seule** lance une <InlineCode>TypeError</InlineCode> au lieu d'échouer silencieusement.
+- Les **variables non déclarées** ne sont jamais créées implicitement sur l'objet global.
+
+<ExerciseById id="01-strict-mode" />
+
+## Ordre d'évaluation
+
+Quand JavaScript rencontre une déclaration de classe, il exécute une séquence précise. Connaître cet ordre permet d'éviter des bugs étranges (typiquement avec les static fields qui se référencent entre eux).
+
+Voici ce qui se passe **dans l'ordre** :
+
+1. La clause <InlineCode>extends</InlineCode> (si présente) est évaluée. L'expression à droite doit être une fonction-constructeur ou <InlineCode>null</InlineCode>.
+2. Le <InlineCode>constructor</InlineCode> est extrait du corps (s'il n'y en a pas, un constructor par défaut est créé).
+3. Les **clés** des propriétés sont évaluées dans l'ordre déclaratif. Cela importe pour les clés calculées : <InlineCode>{"[computeKey()]"}</InlineCode>.
+4. Les **méthodes et accessors** sont installés : sur le <InlineCode>prototype</InlineCode> pour les méthodes d'instance, sur la **classe** pour les méthodes statiques.
+5. Les **champs** :
+   - Les **instance fields** ne s'initialisent **pas** maintenant — leur initializer sera évalué au début de chaque <InlineCode>constructor</InlineCode>.
+   - Les **static fields** s'initialisent **immédiatement**, dans l'ordre déclaratif, au moment où la classe est définie.
+6. Les **static initialization blocks** s'exécutent dans l'ordre déclaratif, mélangés avec les static fields selon leur position dans le code.
+
+### Implication pratique
+
+Dans l'initializer d'un static field, <InlineCode>this</InlineCode> réfère à **la classe elle-même**. Cela permet de calculer un static à partir d'un autre :
+
+```js
+class Config {
+  static a = 10;
+  static b = this.a + 1; // this === Config → b vaut 11
+  static c = this.b * 2; // 22
+}
+
+console.log(Config.a, Config.b, Config.c); // 10 11 22
+```
+
+L'ordre déclaratif est crucial. Inverser <InlineCode>a</InlineCode> et <InlineCode>b</InlineCode> ferait planter (<InlineCode>this.a</InlineCode> serait <InlineCode>undefined</InlineCode> au moment de calculer <InlineCode>b</InlineCode>).
+
+```js
+class Broken {
+  static b = this.a + 1; // this.a n'existe pas encore → NaN
+  static a = 10;
+}
+console.log(Broken.b); // NaN
+```
+
+Pour les **instance fields**, l'ordre est respecté à chaque construction :
+
+```js
+class Point {
+  x = 0;
+  y = this.x + 1; // évalué après x → vaut 1
+}
+
+console.log(new Point()); // Point { x: 0, y: 1 }
+```
+
+<ExerciseById id="01-evaluation-order" />
+
+## Pas de hoisting
+
+Tu connais peut-être ce comportement avec les fonctions :
+
+```js
+hello(); // ✅ "Hi"
+function hello() { console.log("Hi"); }
+```
+
+Cela fonctionne grâce au **hoisting** : la déclaration de fonction est "remontée" en haut du scope.
+
+**Les classes, elles, ne sont pas hoistées** au sens utilisable. Comme <InlineCode>let</InlineCode> et <InlineCode>const</InlineCode>, elles sont placées dans la **Temporal Dead Zone (TDZ)** : le binding existe dès le début du scope, mais y accéder avant la ligne de déclaration lance une erreur.
+
+```js
+new Foo();   // ❌ ReferenceError: Cannot access 'Foo' before initialization
+class Foo {}
+```
+
+Même chose pour une class expression :
+
+```js
+new Bar();         // ❌ ReferenceError
+const Bar = class {};
+```
+
+<Callout variant="warn" title="Toujours déclarer avant d'utiliser">
+  Place tes déclarations de classe **avant** leur première utilisation. C'est plus prévisible que de compter sur le hoisting comme avec les fonctions, et ça matche le comportement des autres langages OO.
+</Callout>

@@ -1,0 +1,213 @@
+---
+number: "06"
+title: "Coercion : toPrimitive & toStringTag"
+subtitle: "Hooker les opérateurs et Object.prototype.toString."
+---
+
+## Avant ES6 : valueOf et toString
+
+Avant les Symbols, customiser comment un objet se convertit en primitif passait par deux méthodes héritées : <InlineCode>valueOf()</InlineCode> (pour les conversions numériques) et <InlineCode>toString()</InlineCode> (pour les conversions string). C'était un duo **awkward et incomplet** :
+
+- Tu devais override **les deux** méthodes pour couvrir tous les cas.
+- L'algorithme qui choisit laquelle appeler dépendait du contexte (opérateur, template literal, comparaison) et était difficile à prédire.
+- Pas de moyen propre de distinguer <InlineCode>+obj</InlineCode> de <InlineCode>"" + obj</InlineCode>.
+
+ES6 introduit deux Symbols qui modernisent tout ça : <InlineCode>Symbol.toPrimitive</InlineCode> pour la conversion en primitif, et <InlineCode>Symbol.toStringTag</InlineCode> pour customiser le résultat de <InlineCode>Object.prototype.toString</InlineCode>. Plus expressif, plus prédictible, plus propre.
+
+## Symbol.toPrimitive
+
+C'est la méthode appelée par le moteur **chaque fois qu'un objet doit être converti en primitif**. Elle reçoit un argument unique, <InlineCode>hint</InlineCode>, qui indique le **type de conversion attendu** :
+
+- <InlineCode>"number"</InlineCode> — opérateurs arithmétiques (<InlineCode>-</InlineCode>, <InlineCode>*</InlineCode>, <InlineCode>/</InlineCode>), comparaisons (<InlineCode>{"<"}</InlineCode>, <InlineCode>{">"}</InlineCode>), <InlineCode>Number(obj)</InlineCode>, opérateur unaire <InlineCode>+</InlineCode>.
+- <InlineCode>"string"</InlineCode> — template literals, concaténation explicite avec une string, <InlineCode>String(obj)</InlineCode>.
+- <InlineCode>"default"</InlineCode> — cas ambigus, principalement l'opérateur binaire <InlineCode>+</InlineCode> (qui peut être addition ou concat selon les opérandes) et <InlineCode>==</InlineCode>.
+
+```js
+class Money {
+  constructor(amount) {
+    this.amount = amount;
+  }
+
+  [Symbol.toPrimitive](hint) {
+    if (hint === "number") return this.amount;
+    if (hint === "string") return `${this.amount}€`;
+    return `Money(${this.amount}€)`; // hint === "default"
+  }
+}
+
+const m = new Money(42);
+
+// hint === "number"
+console.log(+m);       // 42
+console.log(m * 2);    // 84
+console.log(m > 30);   // true
+console.log(Number(m)); // 42
+
+// hint === "string"
+console.log(`${m}`);        // "42€"
+console.log(String(m));     // "42€"
+console.log("Total : " + new Money(10)); // Attention : voir plus bas
+
+// hint === "default"
+console.log("" + m);   // "Money(42€)"
+console.log(m + "");   // "Money(42€)"
+console.log(m == "Money(42€)"); // true (default puis comparaison)
+```
+
+<Callout variant="warn" title="Le piège de l'opérateur +">
+  L'opérateur binaire <InlineCode>+</InlineCode> envoie le hint <InlineCode>"default"</InlineCode>, **pas** <InlineCode>"string"</InlineCode>, même quand un des opérandes est une string. C'est à toi de gérer ce cas dans la branche <InlineCode>default</InlineCode>. Si tu veux le même comportement que pour <InlineCode>"string"</InlineCode>, tu peux simplement faire <InlineCode>if (hint === "string" || hint === "default")</InlineCode>.
+</Callout>
+
+### Pourquoi c'est mieux qu'avant
+
+Compare avec l'approche pré-ES6 :
+
+```js
+class MoneyOld {
+  constructor(amount) { this.amount = amount; }
+  valueOf() { return this.amount; }
+  toString() { return `${this.amount}€`; }
+}
+
+const m = new MoneyOld(42);
+console.log(+m);       // 42      (valueOf)
+console.log(`${m}`);   // "42€"    (toString)
+console.log("" + m);   // 42       ❌ on voulait "42€" !
+```
+
+Avec <InlineCode>valueOf</InlineCode>/<InlineCode>toString</InlineCode>, le cas <InlineCode>"" + m</InlineCode> est piégeux : <InlineCode>+</InlineCode> appelle <InlineCode>valueOf</InlineCode> en priorité, donc tu obtiens <InlineCode>42</InlineCode> au lieu de <InlineCode>"42€"</InlineCode>. Avec <InlineCode>Symbol.toPrimitive</InlineCode>, tu **contrôles précisément** le résultat dans chaque branche.
+
+<ExerciseById id="06-to-primitive" />
+
+## Symbol.toStringTag
+
+Quand tu appelles <InlineCode>Object.prototype.toString.call(obj)</InlineCode>, tu obtiens une string de la forme <InlineCode>"[object Type]"</InlineCode>. Pour un objet custom, c'est <InlineCode>"[object Object]"</InlineCode> par défaut — pas très utile.
+
+<InlineCode>Symbol.toStringTag</InlineCode> te permet de **renommer la partie "Type"** :
+
+```js
+class Box {
+  get [Symbol.toStringTag]() {
+    return "Box";
+  }
+}
+
+console.log(Object.prototype.toString.call(new Box())); // "[object Box]"
+```
+
+Note la définition en **getter** (<InlineCode>get</InlineCode>) — c'est la convention recommandée, même si une simple méthode fonctionne aussi. Le getter est plus léger : il ne crée pas une propriété sur chaque instance.
+
+### Pourquoi c'est utile
+
+C'est exactement ce qui fait que les types built-in se présentent proprement :
+
+```js
+console.log(Object.prototype.toString.call(new Map()));     // "[object Map]"
+console.log(Object.prototype.toString.call(new Set()));     // "[object Set]"
+console.log(Object.prototype.toString.call(new Promise(() => {}))); // "[object Promise]"
+console.log(Object.prototype.toString.call([]));            // "[object Array]"
+console.log(Object.prototype.toString.call(/foo/));         // "[object RegExp]"
+```
+
+Toutes ces classes définissent un <InlineCode>Symbol.toStringTag</InlineCode> sur leur prototype. Tu peux faire pareil pour tes propres classes.
+
+```js
+class HttpResponse {
+  constructor(status, body) {
+    this.status = status;
+    this.body = body;
+  }
+  get [Symbol.toStringTag]() {
+    return "HttpResponse";
+  }
+}
+
+const res = new HttpResponse(200, "OK");
+console.log(Object.prototype.toString.call(res)); // "[object HttpResponse]"
+```
+
+<Callout variant="info" title="Cas d'usage typiques">
+  <InlineCode>Symbol.toStringTag</InlineCode> sert principalement à **deux choses** :
+  <br />- **Debug** : affichage plus parlant dans les outils, les logs, les inspecteurs.
+  <br />- **Type-checking** dans des libs : certaines bibliothèques font du duck-typing via <InlineCode>Object.prototype.toString.call(obj)</InlineCode> pour distinguer un Map d'un Set d'un objet quelconque, sans dépendre de <InlineCode>instanceof</InlineCode> (qui peut échouer entre realms / iframes).
+</Callout>
+
+```js
+// Détection robuste, fonctionne même cross-realm
+function isMap(x) {
+  return Object.prototype.toString.call(x) === "[object Map]";
+}
+
+console.log(isMap(new Map()));    // true
+console.log(isMap({}));            // false
+console.log(isMap(new Set()));     // false
+```
+
+### Toujours en getter, dans le prototype
+
+Une erreur fréquente : définir <InlineCode>Symbol.toStringTag</InlineCode> comme une **propriété d'instance** plutôt qu'un getter sur le prototype. Ça fonctionne, mais ça duplique la string sur chaque instance.
+
+```js
+// ❌ Tag dupliqué sur chaque instance
+class BadBox {
+  constructor() {
+    this[Symbol.toStringTag] = "Box"; // dans le constructor !
+  }
+}
+
+// ✅ Getter sur le prototype, partagé
+class GoodBox {
+  get [Symbol.toStringTag]() { return "Box"; }
+}
+```
+
+Le getter est défini une seule fois sur <InlineCode>GoodBox.prototype</InlineCode>, peu importe le nombre d'instances. C'est le pattern utilisé par toutes les classes built-in.
+
+<ExerciseById id="06-to-string-tag" />
+
+## Petit récap
+
+Voici un tableau qui résume quel opérateur déclenche quel Symbol, avec l'exemple correspondant :
+
+| Opération | Symbol concerné | Hint passé | Exemple |
+|---|---|---|---|
+| `+obj` (unaire) | `Symbol.toPrimitive` | `"number"` | `+new Money(42) === 42` |
+| `obj * 2`, `obj - 5` | `Symbol.toPrimitive` | `"number"` | `new Money(10) * 2 === 20` |
+| `obj > 5`, `obj < other` | `Symbol.toPrimitive` | `"number"` | `new Money(42) > 30` |
+| `Number(obj)` | `Symbol.toPrimitive` | `"number"` | `Number(new Money(42)) === 42` |
+| `` `${obj}` `` | `Symbol.toPrimitive` | `"string"` | `` `${new Money(42)}` === "42€" `` |
+| `String(obj)` | `Symbol.toPrimitive` | `"string"` | `String(new Money(42)) === "42€"` |
+| `obj + other` (binaire) | `Symbol.toPrimitive` | `"default"` | `new Money(42) + ""` |
+| `Object.prototype.toString.call(obj)` | `Symbol.toStringTag` | — | `"[object Box]"` |
+
+### Ordre de fallback
+
+Si <InlineCode>Symbol.toPrimitive</InlineCode> n'est **pas défini**, le moteur retombe sur l'algorithme historique :
+
+- Pour le hint <InlineCode>"string"</InlineCode> : il appelle <InlineCode>toString()</InlineCode>, puis <InlineCode>valueOf()</InlineCode> en fallback.
+- Pour le hint <InlineCode>"number"</InlineCode> ou <InlineCode>"default"</InlineCode> : il appelle <InlineCode>valueOf()</InlineCode> d'abord, puis <InlineCode>toString()</InlineCode>.
+
+Tu n'as donc **pas besoin** d'override les anciennes méthodes si tu définis <InlineCode>Symbol.toPrimitive</InlineCode> : il a la priorité absolue. C'est exactement pour ça qu'on le qualifie de hook moderne et propre.
+
+```js
+class HasAll {
+  valueOf() { return 1; }
+  toString() { return "two"; }
+  [Symbol.toPrimitive](hint) {
+    return "three"; // Toujours utilisé, peu importe le hint
+  }
+}
+
+const h = new HasAll();
+console.log(+h);       // NaN — "three" n'est pas un nombre
+console.log(`${h}`);   // "three"
+console.log("" + h);   // "three"
+// valueOf et toString ne sont JAMAIS appelés
+```
+
+### À retenir
+
+- <InlineCode>Symbol.toPrimitive</InlineCode> remplace avantageusement <InlineCode>valueOf</InlineCode> + <InlineCode>toString</InlineCode> et donne un contrôle fin par contexte.
+- <InlineCode>Symbol.toStringTag</InlineCode> customise <InlineCode>Object.prototype.toString.call(obj)</InlineCode> — utile pour le debug et le type-checking robuste.
+- Si <InlineCode>Symbol.toPrimitive</InlineCode> est défini, il a la priorité sur <InlineCode>valueOf</InlineCode>/<InlineCode>toString</InlineCode>.
+- Les Symbols built-in sont des **hooks** : ils permettent de connecter tes classes aux mécanismes internes du langage, sans monkey-patcher les prototypes natifs.

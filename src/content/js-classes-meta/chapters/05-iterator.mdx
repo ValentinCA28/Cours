@@ -1,0 +1,230 @@
+---
+number: "05"
+title: "Symbol.iterator"
+subtitle: "Rendre n'importe quoi itérable avec for...of."
+---
+
+## Le protocole d'itération
+
+Quand tu écris <InlineCode>for...of</InlineCode>, le spread <InlineCode>...</InlineCode> ou <InlineCode>Array.from()</InlineCode>, JavaScript ne fait pas de magie : il suit un **protocole standardisé**, le même pour les arrays, les strings, les Map, les Set et tout le reste. Comprendre ce protocole, c'est comprendre comment plugger **tes propres classes** sur ces opérations natives.
+
+Le protocole repose sur deux concepts complémentaires :
+
+- Un objet est dit **iterable** s'il possède une méthode <InlineCode>[Symbol.iterator]()</InlineCode>. Cette méthode retourne un **iterator**.
+- Un **iterator** est un objet qui possède une méthode <InlineCode>next()</InlineCode>. À chaque appel, <InlineCode>next()</InlineCode> retourne un objet de la forme <InlineCode>{"{ value, done }"}</InlineCode>.
+
+Tant que <InlineCode>done</InlineCode> vaut <InlineCode>false</InlineCode>, on continue à itérer. Quand <InlineCode>done</InlineCode> vaut <InlineCode>true</InlineCode>, c'est terminé.
+
+```js
+// Un array est iterable : il a une méthode [Symbol.iterator]()
+const arr = [10, 20, 30];
+const it = arr[Symbol.iterator]();
+
+console.log(it.next()); // { value: 10, done: false }
+console.log(it.next()); // { value: 20, done: false }
+console.log(it.next()); // { value: 30, done: false }
+console.log(it.next()); // { value: undefined, done: true }
+```
+
+C'est exactement ce que <InlineCode>for...of</InlineCode> fait sous le capot : il appelle <InlineCode>[Symbol.iterator]()</InlineCode> pour obtenir l'iterator, puis enchaîne les <InlineCode>next()</InlineCode> jusqu'à <InlineCode>done: true</InlineCode>.
+
+<Callout variant="info" title="Pourquoi un Symbol et pas une simple méthode ?">
+  Utiliser <InlineCode>Symbol.iterator</InlineCode> comme nom de propriété évite tout conflit avec une méthode <InlineCode>iterator</InlineCode> qui existerait déjà sur l'objet. Les Symbols sont garantis uniques : aucune collision possible avec une méthode utilisateur.
+</Callout>
+
+## Implémenter Symbol.iterator manuellement
+
+Le vrai pouvoir du protocole, c'est qu'il est **public et ouvert**. Tu peux rendre n'importe quelle classe itérable simplement en lui ajoutant la bonne méthode. Voici l'exemple classique : une classe <InlineCode>Range</InlineCode> qui produit les entiers de 1 à <InlineCode>end</InlineCode>.
+
+```js
+class Range {
+  constructor(end) {
+    this.end = end;
+  }
+
+  // Méthode spéciale : son nom est le Symbol Symbol.iterator
+  [Symbol.iterator]() {
+    let i = 1;
+    const end = this.end;
+
+    // On retourne un iterator : un objet avec une méthode next()
+    return {
+      next() {
+        return i <= end
+          ? { value: i++, done: false }
+          : { value: undefined, done: true };
+      },
+    };
+  }
+}
+
+// for...of fonctionne tout seul
+for (const n of new Range(3)) {
+  console.log(n); // 1, 2, 3
+}
+
+// Spread aussi
+console.log([...new Range(3)]); // [1, 2, 3]
+
+// Et Array.from
+console.log(Array.from(new Range(5))); // [1, 2, 3, 4, 5]
+```
+
+Trois remarques importantes :
+
+- La méthode est nommée <InlineCode>[Symbol.iterator]()</InlineCode> (entre crochets, parce que la clé est un Symbol). C'est une **computed property name**.
+- L'iterator retourné est un **nouvel objet à chaque appel**. Sinon, deux <InlineCode>for...of</InlineCode> sur la même <InlineCode>Range</InlineCode> partageraient le même compteur — bug garanti.
+- Le state (ici la variable <InlineCode>i</InlineCode>) vit dans la closure de la méthode. Pas besoin de le stocker sur <InlineCode>this</InlineCode>.
+
+<Callout variant="warn" title="Iterable vs iterator : ne pas confondre">
+  L'**iterable**, c'est ta classe <InlineCode>Range</InlineCode>. L'**iterator**, c'est l'objet retourné par <InlineCode>[Symbol.iterator]()</InlineCode>. Si tu mets <InlineCode>next()</InlineCode> directement sur <InlineCode>Range</InlineCode>, ça ne marchera pas avec <InlineCode>for...of</InlineCode> — il faut le niveau d'indirection.
+</Callout>
+
+<ExerciseById id="05-symbol-iterator" />
+
+## Version generator (le raccourci)
+
+Écrire un iterator manuel, c'est verbeux : il faut gérer l'état, retourner le bon objet, ne pas oublier <InlineCode>done: true</InlineCode> à la fin... Heureusement, ES6 fournit une syntaxe drastiquement plus courte : les **generator methods**, préfixées par <InlineCode>*</InlineCode>.
+
+```js
+class Counter {
+  constructor(max) {
+    this.max = max;
+  }
+
+  // Generator method : note l'astérisque
+  *[Symbol.iterator]() {
+    for (let i = 1; i <= this.max; i++) {
+      yield i;
+    }
+  }
+}
+
+console.log([...new Counter(3)]); // [1, 2, 3]
+
+for (const n of new Counter(5)) {
+  console.log(n); // 1, 2, 3, 4, 5
+}
+```
+
+Le moteur s'occupe automatiquement de :
+
+- Créer un objet iterator avec une méthode <InlineCode>next()</InlineCode>
+- Suspendre l'exécution à chaque <InlineCode>yield</InlineCode>
+- Emballer chaque valeur dans un objet <InlineCode>{"{ value, done }"}</InlineCode>
+- Retourner <InlineCode>{"{ value: undefined, done: true }"}</InlineCode> quand la fonction termine
+
+C'est le même comportement que la version manuelle, mais en 3 lignes au lieu de 12.
+
+<Callout variant="info" title="Generator = iterable ET iterator">
+  Un generator est **à la fois** un iterator (il a <InlineCode>next()</InlineCode>) **et** un iterable (sa méthode <InlineCode>[Symbol.iterator]()</InlineCode> retourne lui-même). C'est pour ça que <InlineCode>for...of</InlineCode> fonctionne directement sur un generator, sans niveau d'indirection.
+</Callout>
+
+### Comparaison côte à côte
+
+```js
+// Version manuelle — verbeuse
+class RangeManual {
+  constructor(end) { this.end = end; }
+  [Symbol.iterator]() {
+    let i = 1;
+    const end = this.end;
+    return {
+      next() {
+        return i <= end
+          ? { value: i++, done: false }
+          : { value: undefined, done: true };
+      },
+    };
+  }
+}
+
+// Version generator — concise
+class RangeGen {
+  constructor(end) { this.end = end; }
+  *[Symbol.iterator]() {
+    for (let i = 1; i <= this.end; i++) yield i;
+  }
+}
+
+// Comportement identique
+console.log([...new RangeManual(3)]); // [1, 2, 3]
+console.log([...new RangeGen(3)]);    // [1, 2, 3]
+```
+
+Dans la vraie vie, **utilise la version generator** dès que possible. Tu n'écriras la version manuelle que dans des cas très spécifiques (par exemple si tu as besoin d'un contrôle fin sur l'objet iterator, ou si tu veux qu'il implémente d'autres méthodes comme <InlineCode>return()</InlineCode> ou <InlineCode>throw()</InlineCode>).
+
+<ExerciseById id="05-iterator-generator" />
+
+## Cas d'usage avancés
+
+Une fois que tu maîtrises <InlineCode>Symbol.iterator</InlineCode>, plein de patterns deviennent possibles. Voici trois exemples concrets pour ouvrir l'horizon.
+
+### Itérer sur des structures custom
+
+Tu as une classe <InlineCode>Tree</InlineCode> ou <InlineCode>LinkedList</InlineCode> ? Implémenter <InlineCode>[Symbol.iterator]</InlineCode> permet d'utiliser <InlineCode>for...of</InlineCode>, le spread et la destructuration directement dessus, sans avoir à exposer la structure interne.
+
+```js
+class LinkedList {
+  constructor() { this.head = null; }
+  push(value) { this.head = { value, next: this.head }; }
+
+  *[Symbol.iterator]() {
+    let node = this.head;
+    while (node) {
+      yield node.value;
+      node = node.next;
+    }
+  }
+}
+
+const list = new LinkedList();
+list.push(3); list.push(2); list.push(1);
+console.log([...list]); // [1, 2, 3]
+```
+
+### Streams paresseux
+
+Un generator ne calcule **que ce qu'on lui demande**. C'est parfait pour de la pagination ou de la lecture de fichiers : on ne charge la page suivante qu'au moment où on en a besoin.
+
+```js
+function* paginate(fetchPage) {
+  let page = 1;
+  while (true) {
+    const items = fetchPage(page++);
+    if (items.length === 0) return;
+    yield* items; // yield* délègue à un autre iterable
+  }
+}
+```
+
+### Séquences infinies sans saturer la mémoire
+
+Comme rien n'est calculé d'avance, tu peux modéliser des séquences infinies sans crash.
+
+```js
+function* fibonacci() {
+  let [a, b] = [0, 1];
+  while (true) {
+    yield a;
+    [a, b] = [b, a + b];
+  }
+}
+
+const fib = fibonacci();
+for (let i = 0; i < 10; i++) {
+  console.log(fib.next().value); // 0, 1, 1, 2, 3, 5, 8, 13, 21, 34
+}
+```
+
+Tu n'aurais jamais pu mettre une séquence infinie dans un array. Avec un iterator, c'est trivial.
+
+## Récapitulatif
+
+| Concept | Méthode | Rôle |
+|---|---|---|
+| **Iterable** | `[Symbol.iterator]()` | Produit un iterator |
+| **Iterator** | `next()` | Avance d'un cran, retourne `{ value, done }` |
+| **Generator** | `function*` + `yield` | Crée un iterator automatiquement |
+
+Le protocole d'itération est l'un des points d'extension les plus puissants de JavaScript : avec une seule méthode, tu plugges ta classe sur <InlineCode>for...of</InlineCode>, le spread, la destructuration, <InlineCode>Array.from()</InlineCode>, <InlineCode>Map</InlineCode>, <InlineCode>Set</InlineCode>, <InlineCode>Promise.all()</InlineCode> et bien d'autres APIs natives.
