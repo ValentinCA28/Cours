@@ -7,14 +7,27 @@ export default function HomePage() {
   const courses = getAllCourses();
 
   // Build search items from all courses and chapters
-  const searchItems: SearchItem[] = courses.flatMap((course) =>
-    course.chapters.map((ch) => ({
-      title: ch.title,
+  const searchItems: SearchItem[] = courses.flatMap((course) => [
+    {
+      title: course.title,
+      subtitle: course.description,
+      keywords: [],
       courseSlug: course.slug,
+      courseTitle: course.title,
+      courseIcon: course.icon,
+      type: "course" as const,
+    },
+    ...course.chapters.map((ch) => ({
+      title: ch.title,
+      subtitle: ch.subtitle,
+      keywords: ch.keywords,
+      courseSlug: course.slug,
+      courseTitle: course.title,
+      courseIcon: course.icon,
       chapterSlug: ch.slug,
       type: "chapter" as const,
-    }))
-  );
+    })),
+  ]);
 
   return (
     <>

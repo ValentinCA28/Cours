@@ -5,9 +5,56 @@ import Link from "next/link";
 
 export interface SearchItem {
   title: string;
+  subtitle?: string;
+  keywords?: string[];
   courseSlug: string;
-  chapterSlug: string;
+  courseTitle?: string;
+  courseIcon?: string;
+  chapterSlug?: string;
   type: "chapter" | "course";
+}
+
+interface ScoredItem extends SearchItem {
+  score: number;
+  matchedKeyword?: string;
+}
+
+function scoreItem(item: SearchItem, q: string): ScoredItem | null {
+  const title = item.title.toLowerCase();
+  const subtitle = (item.subtitle || "").toLowerCase();
+  const courseTitle = (item.courseTitle || "").toLowerCase();
+
+  let score = 0;
+  let matchedKeyword: string | undefined;
+
+  if (title === q) score += 200;
+  else if (title.startsWith(q)) score += 100;
+  else if (title.includes(q)) score += 60;
+
+  if (subtitle.includes(q)) score += 25;
+  if (courseTitle.includes(q)) score += 15;
+
+  if (item.keywords) {
+    for (const kw of item.keywords) {
+      const k = kw.toLowerCase();
+      if (k === q) {
+        score += 80;
+        matchedKeyword = kw;
+        break;
+      }
+      if (k.startsWith(q)) {
+        score += 50;
+        if (!matchedKeyword) matchedKeyword = kw;
+      } else if (k.includes(q)) {
+        score += 30;
+        if (!matchedKeyword) matchedKeyword = kw;
+      }
+    }
+  }
+
+  if (item.type === "course") score += 5;
+
+  return score > 0 ? { ...item, score, matchedKeyword } : null;
 }
 
 interface TopBarProps {
@@ -28,13 +75,13 @@ export default function TopBar({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Filter results
-  const results =
+  // Filter & score results
+  const results: ScoredItem[] =
     query.trim().length > 0
-      ? searchItems
-          .filter((item) =>
-            item.title.toLowerCase().includes(query.toLowerCase())
-          )
+      ? (searchItems
+          .map((item) => scoreItem(item, query.trim().toLowerCase()))
+          .filter(Boolean) as ScoredItem[])
+          .sort((a, b) => b.score - a.score)
           .slice(0, 8)
       : [];
 
@@ -79,10 +126,10 @@ export default function TopBar({
   return (
     <header className="fixed top-0 left-0 right-0 z-50 flex h-[52px] items-center justify-between border-b border-border bg-surface/80 px-4 backdrop-blur-md">
       {/* Left: Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-sm min-w-0 shrink-0">
+      <div className="flex items-center gap-1.5 text-sm min-w-0 flex-1 mr-3">
         <Link
           href="/"
-          className="flex items-center gap-1 text-muted transition-colors hover:text-text whitespace-nowrap"
+          className="flex items-center gap-1 text-muted transition-colors hover:text-text whitespace-nowrap shrink-0"
         >
           <svg
             width="16"
@@ -101,17 +148,18 @@ export default function TopBar({
         </Link>
         {courseTitle && courseSlug && (
           <>
-            <span className="text-muted/50">/</span>
+            <span className="text-muted/50 shrink-0">/</span>
             <Link
               href={`/${courseSlug}`}
-              className="truncate font-semibold text-accent transition-colors hover:text-accent2"
+              className="truncate font-semibold text-accent transition-colors hover:text-accent2 min-w-0"
+              title={courseTitle}
             >
               {courseTitle}
             </Link>
-            <span className="text-muted/50">/</span>
+            <span className="text-muted/50 shrink-0 hidden md:inline">/</span>
             <Link
               href={`/${courseSlug}`}
-              className="text-muted transition-colors hover:text-text whitespace-nowrap"
+              className="text-muted transition-colors hover:text-text whitespace-nowrap shrink-0 hidden md:inline"
             >
               Chapitres
             </Link>
@@ -120,7 +168,7 @@ export default function TopBar({
       </div>
 
       {/* Right: Search + Progress + Links */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 shrink-0">
         {/* Chapter index link */}
         {courseSlug && (
           <Link
@@ -180,33 +228,47 @@ export default function TopBar({
 
           {/* Dropdown */}
           {showDropdown && (
-            <div className="absolute right-0 top-full mt-1.5 w-[320px] overflow-hidden rounded-lg border border-border bg-surface shadow-lg shadow-black/20">
+            <div className="absolute right-0 top-full mt-1.5 w-[360px] overflow-hidden rounded-lg border border-border bg-surface shadow-lg shadow-black/20">
               {results.length > 0 ? (
                 <ul className="py-1">
-                  {results.map((item, i) => (
-                    <li key={`${item.courseSlug}-${item.chapterSlug}-${i}`}>
-                      <Link
-                        href={`/${item.courseSlug}/${item.chapterSlug}`}
-                        onClick={() => {
-                          setIsOpen(false);
-                          setQuery("");
-                        }}
-                        className="flex items-center gap-3 px-3 py-2 transition-colors hover:bg-surface2"
-                      >
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-accent/10 font-mono text-[10px] text-accent">
-                          {item.type === "chapter" ? "#" : "📚"}
-                        </span>
-                        <div className="min-w-0">
-                          <span className="block text-sm text-text truncate">
-                            {item.title}
+                  {results.map((item, i) => {
+                    const href = item.chapterSlug
+                      ? `/${item.courseSlug}/${item.chapterSlug}`
+                      : `/${item.courseSlug}`;
+                    const context =
+                      item.type === "course"
+                        ? "Cours"
+                        : item.courseTitle || item.courseSlug;
+                    return (
+                      <li key={`${item.courseSlug}-${item.chapterSlug || "course"}-${i}`}>
+                        <Link
+                          href={href}
+                          onClick={() => {
+                            setIsOpen(false);
+                            setQuery("");
+                          }}
+                          className="flex items-center gap-3 px-3 py-2 transition-colors hover:bg-surface2"
+                        >
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-accent/10 text-sm">
+                            {item.courseIcon || (item.type === "chapter" ? "#" : "📚")}
                           </span>
-                          <span className="block text-xs text-muted truncate">
-                            {item.courseSlug}
+                          <div className="min-w-0 flex-1">
+                            <span className="block text-sm text-text truncate">
+                              {item.title}
+                            </span>
+                            <span className="block text-xs text-muted truncate">
+                              {item.matchedKeyword
+                                ? `${context} — ${item.matchedKeyword}`
+                                : context}
+                            </span>
+                          </div>
+                          <span className="shrink-0 text-[10px] font-mono uppercase tracking-wider text-muted/60">
+                            {item.type === "course" ? "cours" : "chap."}
                           </span>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <div className="px-3 py-4 text-center text-sm text-muted">

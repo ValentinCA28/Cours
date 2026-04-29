@@ -18,10 +18,30 @@ export interface ChapterMeta {
   number: string;
   title: string;
   subtitle: string;
+  keywords: string[];
 }
 
 export interface ChapterData extends ChapterMeta {
   content: string;
+}
+
+function extractKeywords(content: string, frontmatterKeywords?: string[]): string[] {
+  const headings = Array.from(content.matchAll(/^##+\s+(.+)$/gm))
+    .map((m) => m[1].replace(/<[^>]+>/g, "").replace(/`/g, "").trim())
+    .filter(Boolean);
+
+  const manual = Array.isArray(frontmatterKeywords) ? frontmatterKeywords : [];
+
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const kw of [...manual, ...headings]) {
+    const norm = kw.toLowerCase();
+    if (!seen.has(norm)) {
+      seen.add(norm);
+      result.push(kw);
+    }
+  }
+  return result;
 }
 
 export function getAllCourses(): CourseMeta[] {
@@ -58,12 +78,13 @@ function getChapters(courseSlug: string): ChapterMeta[] {
     .sort()
     .map((file) => {
       const raw = fs.readFileSync(path.join(chapDir, file), "utf-8");
-      const { data } = matter(raw);
+      const { data, content } = matter(raw);
       return {
         slug: file.replace(".mdx", ""),
         number: data.number || "00",
         title: data.title || "Sans titre",
         subtitle: data.subtitle || "",
+        keywords: extractKeywords(content, data.keywords),
       };
     });
 }
@@ -88,6 +109,7 @@ export function getChapter(
     number: data.number || "00",
     title: data.title || "Sans titre",
     subtitle: data.subtitle || "",
+    keywords: extractKeywords(content, data.keywords),
     content,
   };
 }

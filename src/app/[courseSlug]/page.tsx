@@ -19,7 +19,11 @@ export default function CourseIndexPage({ params }: Props) {
 
   const searchItems: SearchItem[] = course.chapters.map((ch) => ({
     title: ch.title,
+    subtitle: ch.subtitle,
+    keywords: ch.keywords,
     courseSlug: course.slug,
+    courseTitle: course.title,
+    courseIcon: course.icon,
     chapterSlug: ch.slug,
     type: "chapter" as const,
   }));

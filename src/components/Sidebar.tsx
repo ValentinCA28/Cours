@@ -19,7 +19,7 @@ export default function Sidebar({ courseMeta, currentChapter }: SidebarProps) {
         <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-accent">
           Holberton School
         </span>
-        <h2 className="mt-1.5 text-lg font-bold leading-snug text-text">
+        <h2 className="mt-1.5 text-lg font-bold leading-snug text-text break-words hyphens-auto" lang="fr">
           {courseMeta.title}
         </h2>
       </div>
